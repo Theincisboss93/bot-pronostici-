@@ -17,6 +17,10 @@ logging.basicConfig(
 TOKEN = "8736023738:AAGfnjI9MURTUKNqbG80Pe4_aah4_IyPfpk"
 FOOTBALL_API_KEY = "be001fd3625a4f84b61b28e26ba101b2"
 
+# ID della chat o del canale in cui inviare la schedina automatica alle 10:00
+# (Se vuoi che arrivi a te in chat privata, metti il tuo Chat ID numerico, oppure '@TuoCanale')
+TARGET_CHAT_ID = "1220916735" 
+
 # 1. Server web fittizio per Render (Piano Free)
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -29,113 +33,78 @@ def run_web_server():
     server = HTTPServer(("0.0.0.0", port), SimpleHandler)
     server.serve_forever()
 
+# Funzione per generare il testo della schedina e della Bomba
+def genera_testo_pronostici():
+    oggi_ita = datetime.now().strftime('%d/%m/%Y')
+    
+    # Testo della Schedina Standard con Stake (quanto puntare)
+    testo = (
+        f"🔥 **SCHEDINA DEL GIORNO ({oggi_ita})** 🔥\n\n"
+        "⚽ **Partite Selezionate & Analisi:**\n\n"
+        "1️⃣ **Match Principale**\n"
+        "🔹 Pronostico: 1X + Over 1.5\n"
+        "📊 Quota consigliata: `1.55`\n"
+        "💰 **Stake consigliato:** 4/10 (Moderata)\n\n"
+        "2️⃣ **Match Secondario**\n"
+        "🔹 Pronostico: Goal (Entrambe segnano)\n"
+        "📊 Quota consigliata: `1.70`\n"
+        "💰 **Stake consigliato:** 3/10 (Tranquilla)\n\n"
+        "💣 **--- SCHEDINA BOMBA DEL GIORNO ---** 💣\n"
+        "⚽ *Combinata ad alto rendimento*\n"
+        "🔹 Segno 1 + Over 2.5 + Multigol\n"
+        "📊 **Quota Totale Bomba:** `~8.50`\n"
+        "💰 **Stake consigliato:** 1/10 (Tentativo a quota alta)\n\n"
+        "⚠️ *Gioca responsabilmente!* 🍀"
+    )
+    return testo
+
 # 2. Comando /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         "Benvenuto su **@KingPronostici_bot**! ⚽🔥\n\n"
-        "Sono il tuo assistente avanzato per le scommesse.\n"
-        "Usa /pronostici per vedere le partite, le quote e l'esito in tempo reale!"
+        "Il tuo bot definitivo per Schedine, Stake di puntata e Schedina Bomba giornaliera!\n"
+        "Usa /pronostici per vedere subito i consigli del giorno."
     )
     await update.message.reply_text(welcome_text, parse_mode="Markdown")
 
-# 3. Comando /pronostici con quote dedicate e controllo esito Vinto/Perso
+# 3. Comando /pronostici manuale
 async def pronostici(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    oggi = datetime.now().strftime('%Y-%m-%d')
-    oggi_ita = datetime.now().strftime('%d/%m/%Y')
-    
-    url = f"https://api.football-data.org/v4/matches?date={oggi}"
-    headers = {"X-Auth-Token": FOOTBALL_API_KEY}
-    
-    matches_found = False
-    schedina_text = f"🔥 **SCHEDINA E RISULTATI ({oggi_ita})** 🔥\n\n"
-    
+    testo_schedina = genera_testo_pronostici()
+    await update.message.reply_text(testo_schedina, parse_mode="Markdown")
+
+# 4. Funzione per l'invio automatico giornaliero delle 10:00
+async def invio_automatico_mattutino(context: ContextTypes.DEFAULT_TYPE):
     try:
-        response = requests.get(url, headers=headers)
-        data = response.json()
-        matches = data.get("matches", [])
-        
-        if matches:
-            count = 0
-            for match in matches[:4]:
-                home = match.get('homeTeam', {}).get('name', 'Squadra Casa')
-                away = match.get('awayTeam', {}).get('name', 'Squadra Ospite')
-                competition = match.get('competition', {}).get('name', 'Campionato')
-                status = match.get('status', 'SCHEDULED')
-                
-                # Definiamo un pronostico standard per la partita e una quota consigliata
-                pronostico = "1X + Over 1.5"
-                quota = "1.55"
-                
-                esito_str = "⏳ *In programma / Non iniziata*"
-                
-                # Se la partita è finita, calcoliamo se è Vinta o Persa in base ai gol reali
-                if status == 'FINISHED':
-                    score = match.get('score', {}).get('fullTime', {})
-                    home_goals = score.get('home', 0)
-                    away_goals = score.get('away', 0)
-                    tot_goals = home_goals + away_goals
-                    
-                    # Logica di esempio per 1X + Over 1.5: Vinto se Casa non perde e ci sono almeno 2 gol totali
-                    casa_non_perde = home_goals >= away_goals
-                    over_15 = tot_goals >= 2
-                    
-                    if casa_non_perde and over_15:
-                        esito_str = "✅ **PRONOSTICO VINTO!** 🎉"
-                    else:
-                        esito_str = "❌ **PRONOSTICO PERSO** 😢"
-                        
-                    risultato_finale = f"({home_goals} - {away_goals})"
-                elif status in ['IN_PLAY', 'PAUSED']:
-                    score = match.get('score', {}).get('fullTime', {})
-                    hg = score.get('home', 0)
-                    ag = score.get('away', 0)
-                    esito_str = f"🔴 *LIVE ({hg} - {ag})*"
-                else:
-                    risultato_finale = "vs"
-
-                if status == 'FINISHED':
-                    match_title = f"⚽ **{home} {home_goals}-{away_goals} {away}**"
-                else:
-                    match_title = f"⚽ **{home} vs {away}**"
-
-                schedina_text += f"🏆 *{competition}*\n"
-                schedina_text += f"{match_title}\n"
-                schedina_text += f"🔹 Pronostico: {pronostico}\n"
-                schedina_text += f"📊 Quota consigliata: `{quota}`\n"
-                schedina_text += f"📌 Esito: {esito_str}\n\n"
-                
-                count += 1
-            if count > 0:
-                matches_found = True
-    except Exception as e:
-        logging.error(f"Errore API: {e}")
-
-    # Fallback se non ci sono match oggi
-    if not matches_found:
-        schedina_text += (
-            "⚽ **Top Match di Riferimento**\n\n"
-            "1️⃣ **Milan vs Napoli**\n"
-            "🔹 Pronostico: Goal | Quota: `1.72` | 📌 Esito: ⏳ *In programma*\n\n"
-            "2️⃣ **Liverpool vs Chelsea**\n"
-            "🔹 Pronostico: Over 2.5 | Quota: `1.65` | 📌 Esito: ⏳ *In programma*\n\n"
+        testo_schedina = genera_testo_pronostici()
+        # Invia il messaggio programmato alla chat impostata
+        await context.bot.send_message(
+            chat_id=TARGET_CHAT_ID,
+            text=f"⏰ **PUBBLICAZIONE AUTOMATICA ORE 10:00** ⏰\n\n{testo_schedina}",
+            parse_mode="Markdown"
         )
-    
-    schedina_text += "⚠️ *Aggiornato in tempo reale con i dati ufficiali!*\n"
-    schedina_text += "🍀 *Gioca responsabilmente!*"
-
-    await update.message.reply_text(schedina_text, parse_mode="Markdown")
+    except Exception as e:
+        logging.error(f"Errore nell'invio automatico delle 10:00: {e}")
 
 def main():
+    # Avvia il server web in background per Render
     server_thread = threading.Thread(target=run_web_server, daemon=True)
     server_thread.start()
 
+    # Costruisce l'applicazione Telegram con il supporto per i Job (orari)
     application = ApplicationBuilder().token(TOKEN).build()
     
+    # Configura l'invio automatico ogni giorno alle 10:00 del mattino (orario del server)
+    job_queue = application.job_queue
+    # time(hour=10, minute=0, second=0) imposta l'orario esatto
+    from datetime import time
+    job_queue.run_daily(invio_automatico_mattutino, time=time(hour=10, minute=0, second=0))
+
+    # Registra i comandi
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("pronostici", pronostici))
 
-    logging.info("Bot avviato con successo in modalità polling!")
+    logging.info("Bot avviato con successo in modalità polling con Job Queue attiva!")
     application.run_polling()
 
 if __name__ == '__main__':
-    main()
+main()
