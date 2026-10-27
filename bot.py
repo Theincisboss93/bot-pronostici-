@@ -3,7 +3,7 @@ import logging
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 from datetime import datetime
-import time
+import asyncio
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
@@ -30,7 +30,7 @@ def run_web_server():
     server = HTTPServer(("0.0.0.0", port), SimpleHandler)
     server.serve_forever()
 
-# 2. Menu Principale con Grafica Cyber / Olografica
+# 2. Menu Principale con Bottoni Interattivi Sempre Attivi
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         "╔═════════════════════════╗\n"
@@ -52,7 +52,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif update.callback_query:
         await update.callback_query.message.edit_text(welcome_text, parse_mode="Markdown", reply_markup=reply_markup)
 
-# 3. Schedina del Giorno con Stile Cyber e API Reali
+# 3. Schedina del Giorno con Stile Cyber, API Reali e Pulsanti
 async def genera_testo_pronostici():
     oggi = datetime.now().strftime('%Y-%m-%d')
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
@@ -145,7 +145,7 @@ async def genera_testo_pronostici():
     schedina_text += "⚠️ *Sistema crittografato. Gioca con responsabilità.* 🍀"
     return schedina_text
 
-# 4. Schedina Bomba Cyber con Squadre e Potenziale Altissimo
+# 4. Schedina Bomba Cyber con Squadre e Dettagli
 def genera_testo_bomba():
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
     quota_bomba = 14.20
@@ -173,7 +173,7 @@ def genera_testo_bomba():
     )
     return testo
 
-# 5. Handlers
+# 5. Handlers con Pulsanti di Ritorno
 async def pronostici(update: Update, context: ContextTypes.DEFAULT_TYPE):
     testo = await genera_testo_pronostici()
     keyboard = [[InlineKeyboardButton("🔙 [ TORNA AL MENU PRINCIPALE ]", callback_data="btn_menu")]]
@@ -184,39 +184,27 @@ async def pronostici(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif update.callback_query:
         await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
 
-# Effetto Esplosione prima di mostrare la Bomba
+# Effetto Esplosione Dinamico prima della Bomba
 async def bomba_effetto_esplosione(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    # Step 1: Innesco
     await query.message.edit_text("💣 *INNESCO PROTOCOLLO BOMBA IN CORSO...*\n\n⏱️ `[ 3 ]` ⏳", parse_mode="Markdown")
-    import asyncio
     await asyncio.sleep(1)
     
-    # Step 2: Caricamento
     await query.message.edit_text("💣 *INNESCO PROTOCOLLO BOMBA IN CORSO...*\n\n⏱️ `[ 2 ]` ⚡", parse_mode="Markdown")
     await asyncio.sleep(1)
     
-    # Step 3: Quoziente alto
     await query.message.edit_text("💣 *INNESCO PROTOCOLLO BOMBA IN CORSO...*\n\n⏱️ `[ 1 ]` 🔥", parse_mode="Markdown")
     await asyncio.sleep(1)
     
-    # Step 4: BOOM! ed esposizione schedina
     testo_bomba = genera_testo_bomba()
     keyboard = [[InlineKeyboardButton("🔙 [ TORNA AL MENU PRINCIPALE ]", callback_data="btn_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.message.edit_text(f"💥 **K A B O O M ! ! !** 💥\n\n{testo_bomba}", parse_mode="Markdown", reply_markup=reply_markup)
 
-async def bomba(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    testo = genera_testo_bomba()
-    keyboard = [[InlineKeyboardButton("🔙 [ TORNA AL MENU PRINCIPALE ]", callback_data="btn_menu")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    if update.message:
-        await update.message.reply_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
-
+# Gestore dei Click dei Bottoni
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     
@@ -224,8 +212,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await pronostici(update, context)
     elif query.data == "btn_bomba_avvio":
         await bomba_effetto_esplosione(update, context)
-    elif query.data == "btn_bomba":
-        await bomba(update, context)
     elif query.data == "btn_menu":
         await start(update, context)
 
@@ -237,10 +223,10 @@ def main():
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("pronostici", pronostici))
-    application.add_handler(CommandHandler("bomba", bomba))
+    application.add_handler(CommandHandler("bomba", pronostici)) # Backup per comando testuale
     application.add_handler(CallbackQueryHandler(button_handler))
 
-    logging.info("Cybernetic Bot con effetto esplosione avviato!")
+    logging.info("Cybernetic Bot con bottoni fissi avviato con successo!")
     application.run_polling()
 
 if __name__ == '__main__':
