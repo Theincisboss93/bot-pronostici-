@@ -3,17 +3,18 @@ import logging
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 from datetime import datetime
+import time
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
 
-# Abilita i log
+# Abilita i log di sistema
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 
-# CHIAVI CONFIGURATE CORRETTAMENTE
+# CREDENZIALI CONFIGURATE
 TOKEN = "8736023738:AAGfnjI9MURTUKNqbG80Pe4_aah4_IyPfpk"
 FOOTBALL_API_KEY = "be001fd3625a4f84b61b28e26ba101b2"
 
@@ -29,20 +30,20 @@ def run_web_server():
     server = HTTPServer(("0.0.0.0", port), SimpleHandler)
     server.serve_forever()
 
-# 2. Menu Principale con Grafica Futuristica / Olografica
+# 2. Menu Principale con Grafica Cyber / Olografica
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
-        "╔══════════════════════╗\n"
-        " 🛡️ **SYSTEM: KING_AI v4.0** 🛡️\n"
-        "╚══════════════════════╝\n\n"
+        "╔═════════════════════════╗\n"
+        " 🛡️ **SISTEMA: KING_AI v4.0** 🛡️\n"
+        "╚═════════════════════════╝\n\n"
         "⚡ *Core di Calcolo Quantistico Attivo.*\n"
         "🛰️ *Analisi flussi dati calcistici in tempo reale.*\n\n"
         "🤖 **SELEZIONA PROTOCOLLO:**"
     )
     
     keyboard = [
-        [InlineKeyboardButton("🌐 [ ACCESS: SCHEDINA DEL GIORNO ]", callback_data="btn_pronostici")],
-        [InlineKeyboardButton("⚡ [ OVERLOAD: PROTOCOLLO BOMBA ]", callback_data="btn_bomba")],
+        [InlineKeyboardButton("🌐 [ ACCESSI: SCHEDINA DEL GIORNO ]", callback_data="btn_pronostici")],
+        [InlineKeyboardButton("⚡ [ OVERLOAD: PROTOCOLLO BOMBA ]", callback_data="btn_bomba_avvio")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -51,7 +52,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif update.callback_query:
         await update.callback_query.message.edit_text(welcome_text, parse_mode="Markdown", reply_markup=reply_markup)
 
-# 3. Schedina del Giorno con Stile Cyber / Terminale
+# 3. Schedina del Giorno con Stile Cyber e API Reali
 async def genera_testo_pronostici():
     oggi = datetime.now().strftime('%Y-%m-%d')
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
@@ -63,7 +64,7 @@ async def genera_testo_pronostici():
     schedina_text = (
         "╔═════════════════════════╗\n"
         " 📊 **DATABASE: MATCHES MATRIX**\n"
-        f" 📅 *TIMESTAMP:* `{oggi_ita}`\n"
+        f" 📅 *DATA:* `{oggi_ita}`\n"
         "╚═════════════════════════╝\n\n"
     )
     
@@ -77,7 +78,7 @@ async def genera_testo_pronostici():
             for match in matches[:3]:
                 home = match.get('homeTeam', {}).get('name', 'Squadra A')
                 away = match.get('awayTeam', {}).get('name', 'Squadra B')
-                competition = match.get('competition', {}).get('name', 'League')
+                competition = match.get('competition', {}).get('name', 'Campionato')
                 status = match.get('status', 'SCHEDULED')
                 
                 pronostico = "1X + Over 1.5"
@@ -85,7 +86,7 @@ async def genera_testo_pronostici():
                 stake_euro = 10
                 vincita_possibile = round(stake_euro * quota, 2)
                 
-                esito_str = "⏳ `[ STANDBY ]`"
+                esito_str = "⏳ `[ IN ATTESA ]`"
                 
                 if status == 'FINISHED':
                     score = match.get('score', {}).get('fullTime', {})
@@ -97,9 +98,9 @@ async def genera_testo_pronostici():
                     over_15 = tot_goals >= 2
                     
                     if casa_non_perde and over_15:
-                        esito_str = "🟢 `[ STATUS: SUCCESS (VINTO) ]`"
+                        esito_str = "🟢 `[ STATO: VINTO! ]` 🎉"
                     else:
-                        esito_str = "🔴 `[ STATUS: FAILED (PERSO) ]`"
+                        esito_str = "🔴 `[ STATO: PERSO ]` 😢"
                         
                     match_title = f"⚔️ `{home}` **[{home_goals} - {away_goals}]** `{away}`"
                 elif status in ['IN_PLAY', 'PAUSED']:
@@ -111,12 +112,12 @@ async def genera_testo_pronostici():
                 else:
                     match_title = f"⚔️ `{home}` vs `{away}`"
 
-                schedina_text += f"🏆 *Sector:* {competition}\n"
+                schedina_text += f"🏆 *Competizione:* {competition}\n"
                 schedina_text += f"{match_title}\n"
                 schedina_text += f"🎯 *Algoritmo:* `{pronostico}`\n"
                 schedina_text += f"📊 *Quota:* `{quota}`\n"
-                schedina_text += f"💻 *Stake Suggerito:* `[ █ █ ░ ░ ] {stake_euro}€`\n"
-                schedina_text += f"💵 *Payout Stimato:* `{vincita_possibile}€`\n"
+                schedina_text += f"💻 *Stake Consigliato:* `[ █ █ ░ ░ ] {stake_euro}€`\n"
+                schedina_text += f"💵 *Vincita Possibile:* `{vincita_possibile}€`\n"
                 schedina_text += f"📌 *Esito:* {esito_str}\n"
                 schedina_text += "▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰\n\n"
                 
@@ -128,23 +129,23 @@ async def genera_testo_pronostici():
 
     if not matches_found:
         schedina_text += (
-            "🛰️ *[ MODALITA' SIMULAZIONE QUANTISTICA ]*\n\n"
+            "🛰️ *[ MODALITÀ SIMULAZIONE QUANTISTICA ]*\n\n"
             "1️⃣ **Milan vs Napoli**\n"
             "🎯 *Algoritmo:* 1X + Over 1.5 | 📊 *Quota:* `1.55`\n"
-            "💻 *Stake:* `10€` | 💵 *Payout:* `15.50€`\n"
-            "📌 *Esito:* ⏳ `[ STANDBY ]`\n"
+            "💻 *Stake:* `10€` | 💵 *Vincita:* `15.50€`\n"
+            "📌 *Esito:* ⏳ `[ IN ATTESA ]`\n"
             "▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰\n\n"
             "2️⃣ **Liverpool vs Chelsea**\n"
             "🎯 *Algoritmo:* Goal | 📊 *Quota:* `1.70`\n"
-            "💻 *Stake:* `10€` | 💵 *Payout:* `17.00€`\n"
-            "📌 *Esito:* ⏳ `[ STANDBY ]`\n"
+            "💻 *Stake:* `10€` | 💵 *Vincita:* `17.00€`\n"
+            "📌 *Esito:* ⏳ `[ IN ATTESA ]`\n"
             "▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰\n\n"
         )
     
-    schedina_text += "⚠️ *Warning: System secure & encrypted. Play safe.*"
+    schedina_text += "⚠️ *Sistema crittografato. Gioca con responsabilità.* 🍀"
     return schedina_text
 
-# 4. Schedina Bomba in Stile Cyber-Bomba ad altissimo potenziale
+# 4. Schedina Bomba Cyber con Squadre e Potenziale Altissimo
 def genera_testo_bomba():
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
     quota_bomba = 14.20
@@ -153,52 +154,76 @@ def genera_testo_bomba():
     
     testo = (
         "╔═════════════════════════╗\n"
-        " ☢️ **CYBER-BOMB PROTOCOL** ☢️\n"
-        f" 📅 *TIMESTAMP:* `{oggi_ita}`\n"
+        " ☢️ **PROTOCOLLO CYBER-BOMBA** ☢️\n"
+        f" 📅 *DATA:* `{oggi_ita}`\n"
         "╚═════════════════════════╝\n\n"
-        "⚡ *Analisi combinata ad alto voltaggio (VIP Matrix)*\n\n"
-        "🔹 **Node 01:** Real Madrid vs Inter (Champions League)\n"
-        "   └ *Payload:* `1 + Over 2.5` | 📊 *Quota:* `2.40`\n\n"
-        "🔹 **Node 02:** Bayern Monaco vs Barcellona (Champions League)\n"
-        "   └ *Payload:* `Goal + Over 3.5` | 📊 *Quota:* `2.35`\n\n"
-        "🔹 **Node 03:** Manchester City vs PSG (Champions League)\n"
-        "   └ *Payload:* `1 & Gol` | 📊 *Quota:* `2.50`\n\n"
+        "⚡ *Combinata d'élite ad altissimo rendimento*\n\n"
+        "1️⃣ **Real Madrid vs Inter** (Champions League)\n"
+        "   └ *Cosa giocare:* `1 + Over 2.5` | 📊 *Quota:* `2.40`\n\n"
+        "2️⃣ **Bayern Monaco vs Barcellona** (Champions League)\n"
+        "   └ *Cosa giocare:* `Goal + Over 3.5` | 📊 *Quota:* `2.35`\n\n"
+        "3️⃣ **Manchester City vs PSG** (Champions League)\n"
+        "   └ *Cosa giocare:* `1 & Gol` | 📊 *Quota:* `2.50`\n\n"
         "▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰\n"
-        "📊 *QUOTA TOTAL MATRIX:* `⚡ ~" + str(quota_bomba) + "`\n"
-        "💻 *Unit Risk:* `[ █ ░ ░ ░ ] " + str(puntata_bomba) + "€` (Stake 1/10)\n"
-        "💵 **MAX PAYOUT POTENZIALE:** `🚀 " + str(vincita_bomba) + "€`\n"
+        "📊 *QUOTA TOTALE BOMBA:* `⚡ ~" + str(quota_bomba) + "`\n"
+        "💻 *Puntata consigliata:* `[ █ ░ ░ ░ ] " + str(puntata_bomba) + "€` (Stake 1/10)\n"
+        "💵 **VINCITA POSSIBILE:** `🚀 " + str(vincita_bomba) + "€`\n"
         "▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰\n"
-        "⚠️ *Critical Warning: High risk multiplier sequence.*"
+        "⚠️ *Allerta: Moltiplicatore estremo. Gioca solo il budget di svago!* 🍀"
     )
     return testo
 
 # 5. Handlers
 async def pronostici(update: Update, context: ContextTypes.DEFAULT_TYPE):
     testo = await genera_testo_pronostici()
-    keyboard = [[InlineKeyboardButton("🔙 [ RETURN TO MAIN SYSTEM ]", callback_data="btn_menu")]]
+    keyboard = [[InlineKeyboardButton("🔙 [ TORNA AL MENU PRINCIPALE ]", callback_data="btn_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     if update.message:
         await update.message.reply_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
     elif update.callback_query:
         await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
+
+# Effetto Esplosione prima di mostrare la Bomba
+async def bomba_effetto_esplosione(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    # Step 1: Innesco
+    await query.message.edit_text("💣 *INNESCO PROTOCOLLO BOMBA IN CORSO...*\n\n⏱️ `[ 3 ]` ⏳", parse_mode="Markdown")
+    import asyncio
+    await asyncio.sleep(1)
+    
+    # Step 2: Caricamento
+    await query.message.edit_text("💣 *INNESCO PROTOCOLLO BOMBA IN CORSO...*\n\n⏱️ `[ 2 ]` ⚡", parse_mode="Markdown")
+    await asyncio.sleep(1)
+    
+    # Step 3: Quoziente alto
+    await query.message.edit_text("💣 *INNESCO PROTOCOLLO BOMBA IN CORSO...*\n\n⏱️ `[ 1 ]` 🔥", parse_mode="Markdown")
+    await asyncio.sleep(1)
+    
+    # Step 4: BOOM! ed esposizione schedina
+    testo_bomba = genera_testo_bomba()
+    keyboard = [[InlineKeyboardButton("🔙 [ TORNA AL MENU PRINCIPALE ]", callback_data="btn_menu")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.message.edit_text(f"💥 **K A B O O M ! ! !** 💥\n\n{testo_bomba}", parse_mode="Markdown", reply_markup=reply_markup)
 
 async def bomba(update: Update, context: ContextTypes.DEFAULT_TYPE):
     testo = genera_testo_bomba()
-    keyboard = [[InlineKeyboardButton("🔙 [ RETURN TO MAIN SYSTEM ]", callback_data="btn_menu")]]
+    keyboard = [[InlineKeyboardButton("🔙 [ TORNA AL MENU PRINCIPALE ]", callback_data="btn_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     if update.message:
         await update.message.reply_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
-    elif update.callback_query:
-        await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
     
     if query.data == "btn_pronostici":
         await pronostici(update, context)
+    elif query.data == "btn_bomba_avvio":
+        await bomba_effetto_esplosione(update, context)
     elif query.data == "btn_bomba":
         await bomba(update, context)
     elif query.data == "btn_menu":
@@ -215,7 +240,7 @@ def main():
     application.add_handler(CommandHandler("bomba", bomba))
     application.add_handler(CallbackQueryHandler(button_handler))
 
-    logging.info("Cybernetic Bot v4.0 avviato con successo!")
+    logging.info("Cybernetic Bot con effetto esplosione avviato!")
     application.run_polling()
 
 if __name__ == '__main__':
