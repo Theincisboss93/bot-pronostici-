@@ -2,7 +2,7 @@ import os
 import logging
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
-from datetime import datetime
+from datetime import datetime, time
 import requests
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
@@ -13,12 +13,9 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# INCOLLA QUI LE TUE DUE CHIAVI:
+# CHIAVI E ID CONFIGURATI DIRETTAMENTE
 TOKEN = "8736023738:AAGfnjI9MURTUKNqbG80Pe4_aah4_IyPfpk"
 FOOTBALL_API_KEY = "be001fd3625a4f84b61b28e26ba101b2"
-
-# ID della chat o del canale in cui inviare la schedina automatica alle 10:00
-# (Se vuoi che arrivi a te in chat privata, metti il tuo Chat ID numerico, oppure '@TuoCanale')
 TARGET_CHAT_ID = "1220916735" 
 
 # 1. Server web fittizio per Render (Piano Free)
@@ -37,7 +34,6 @@ def run_web_server():
 def genera_testo_pronostici():
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
     
-    # Testo della Schedina Standard con Stake (quanto puntare)
     testo = (
         f"🔥 **SCHEDINA DEL GIORNO ({oggi_ita})** 🔥\n\n"
         "⚽ **Partite Selezionate & Analisi:**\n\n"
@@ -76,7 +72,6 @@ async def pronostici(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def invio_automatico_mattutino(context: ContextTypes.DEFAULT_TYPE):
     try:
         testo_schedina = genera_testo_pronostici()
-        # Invia il messaggio programmato alla chat impostata
         await context.bot.send_message(
             chat_id=TARGET_CHAT_ID,
             text=f"⏰ **PUBBLICAZIONE AUTOMATICA ORE 10:00** ⏰\n\n{testo_schedina}",
@@ -90,13 +85,11 @@ def main():
     server_thread = threading.Thread(target=run_web_server, daemon=True)
     server_thread.start()
 
-    # Costruisce l'applicazione Telegram con il supporto per i Job (orari)
+    # Costruisce l'applicazione Telegram con il supporto per i Job
     application = ApplicationBuilder().token(TOKEN).build()
     
-    # Configura l'invio automatico ogni giorno alle 10:00 del mattino (orario del server)
+    # Configura l'invio automatico ogni giorno alle 10:00 del mattino
     job_queue = application.job_queue
-    # time(hour=10, minute=0, second=0) imposta l'orario esatto
-    from datetime import time
     job_queue.run_daily(invio_automatico_mattutino, time=time(hour=10, minute=0, second=0))
 
     # Registra i comandi
@@ -107,4 +100,4 @@ def main():
     application.run_polling()
 
 if __name__ == '__main__':
-main()
+    main()
