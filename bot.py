@@ -3,7 +3,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 # Il tuo token di Telegram
-TOKEN = "8736023738:AAF1l4LMIPS2Jiv5g2KbT67L83PkXRLVKFE"
+TOKEN = "8736023738:AAGfnjl9MURTUKNqbG80Pe4_aah4_lyPfpk"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("KingPronostici è online e operativo! ⚽🔥\nUsa /schedina o /superbomba per i pronostici.")
