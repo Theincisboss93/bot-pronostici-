@@ -22,24 +22,27 @@ class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"Bot is alive!")
+        self.wfile.write(b"Cybernetic Bot Online!")
 
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(("0.0.0.0", port), SimpleHandler)
     server.serve_forever()
 
-# 2. Comando /start con pulsanti interattivi grafici
+# 2. Menu Principale con Grafica Futuristica / Olografica
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
-        "👑 **BENVENUTO SU KING PRONOSTICI** 👑\n\n"
-        "⚡ *Il tuo canale d'élite per schedine ad alta precisione con stake e vincite stimate.*\n"
-        "Seleziona una delle opzioni qui sotto per iniziare 👇"
+        "╔══════════════════════╗\n"
+        " 🛡️ **SYSTEM: KING_AI v4.0** 🛡️\n"
+        "╚══════════════════════╝\n\n"
+        "⚡ *Core di Calcolo Quantistico Attivo.*\n"
+        "🛰️ *Analisi flussi dati calcistici in tempo reale.*\n\n"
+        "🤖 **SELEZIONA PROTOCOLLO:**"
     )
     
     keyboard = [
-        [InlineKeyboardButton("📊 Schedina del Giorno", callback_data="btn_pronostici")],
-        [InlineKeyboardButton("💣 Schedina Bomba (Quota Alta)", callback_data="btn_bomba")],
+        [InlineKeyboardButton("🌐 [ ACCESS: SCHEDINA DEL GIORNO ]", callback_data="btn_pronostici")],
+        [InlineKeyboardButton("⚡ [ OVERLOAD: PROTOCOLLO BOMBA ]", callback_data="btn_bomba")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -48,7 +51,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif update.callback_query:
         await update.callback_query.message.edit_text(welcome_text, parse_mode="Markdown", reply_markup=reply_markup)
 
-# 3. Funzione per generare la Schedina del Giorno con Stake e Vincita
+# 3. Schedina del Giorno con Stile Cyber / Terminale
 async def genera_testo_pronostici():
     oggi = datetime.now().strftime('%Y-%m-%d')
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
@@ -57,10 +60,12 @@ async def genera_testo_pronostici():
     headers = {"X-Auth-Token": FOOTBALL_API_KEY}
     
     matches_found = False
-    schedina_text = f"━━━━━━━━━━━━━━━━━━━━━\n" \
-                    f"🔥 **ANALISI & SCHEDINA DEL GIORNO** ⚡\n" \
-                    f"📅 *Data:* `{oggi_ita}`\n" \
-                    f"━━━━━━━━━━━━━━━━━━━━━\n\n"
+    schedina_text = (
+        "╔═════════════════════════╗\n"
+        " 📊 **DATABASE: MATCHES MATRIX**\n"
+        f" 📅 *TIMESTAMP:* `{oggi_ita}`\n"
+        "╚═════════════════════════╝\n\n"
+    )
     
     try:
         response = requests.get(url, headers=headers)
@@ -70,17 +75,17 @@ async def genera_testo_pronostici():
         if matches:
             count = 0
             for match in matches[:3]:
-                home = match.get('homeTeam', {}).get('name', 'Squadra Casa')
-                away = match.get('awayTeam', {}).get('name', 'Squadra Ospite')
-                competition = match.get('competition', {}).get('name', 'Campionato')
+                home = match.get('homeTeam', {}).get('name', 'Squadra A')
+                away = match.get('awayTeam', {}).get('name', 'Squadra B')
+                competition = match.get('competition', {}).get('name', 'League')
                 status = match.get('status', 'SCHEDULED')
                 
                 pronostico = "1X + Over 1.5"
                 quota = 1.55
-                stake_euro = 10  # 10€ consigliati di puntata
+                stake_euro = 10
                 vincita_possibile = round(stake_euro * quota, 2)
                 
-                esito_str = "⏳ *In attesa di inizio*"
+                esito_str = "⏳ `[ STANDBY ]`"
                 
                 if status == 'FINISHED':
                     score = match.get('score', {}).get('fullTime', {})
@@ -92,28 +97,28 @@ async def genera_testo_pronostici():
                     over_15 = tot_goals >= 2
                     
                     if casa_non_perde and over_15:
-                        esito_str = "✅ **ESITO: VINTO!** 🎉"
+                        esito_str = "🟢 `[ STATUS: SUCCESS (VINTO) ]`"
                     else:
-                        esito_str = "❌ **ESITO: PERSO** 😢"
+                        esito_str = "🔴 `[ STATUS: FAILED (PERSO) ]`"
                         
-                    match_title = f"⚽ `{home}` **{home_goals} - {away_goals}** `{away}`"
+                    match_title = f"⚔️ `{home}` **[{home_goals} - {away_goals}]** `{away}`"
                 elif status in ['IN_PLAY', 'PAUSED']:
                     score = match.get('score', {}).get('fullTime', {})
                     hg = score.get('home', 0)
                     ag = score.get('away', 0)
-                    esito_str = f"🔴 **LIVE IN CORSO** `({hg} - {ag})`"
-                    match_title = f"⚽ `{home}` vs `{away}`"
+                    esito_str = f"🔴 `[ LIVE: {hg} - {ag} ]`"
+                    match_title = f"⚔️ `{home}` vs `{away}`"
                 else:
-                    match_title = f"⚽ `{home}` vs `{away}`"
+                    match_title = f"⚔️ `{home}` vs `{away}`"
 
-                schedina_text += f"🏆 *{competition}*\n"
+                schedina_text += f"🏆 *Sector:* {competition}\n"
                 schedina_text += f"{match_title}\n"
-                schedina_text += f"🎯 *Pronostico:* `{pronostico}`\n"
+                schedina_text += f"🎯 *Algoritmo:* `{pronostico}`\n"
                 schedina_text += f"📊 *Quota:* `{quota}`\n"
-                schedina_text += f"💰 *Puntata consigliata:* `{stake_euro}€` (Stake 4/10)\n"
-                schedina_text += f"💵 *Vincita possibile:* `{vincita_possibile}€`\n"
-                schedina_text += f"📌 *Stato:* {esito_str}\n"
-                schedina_text += f"─────────────────────\n\n"
+                schedina_text += f"💻 *Stake Suggerito:* `[ █ █ ░ ░ ] {stake_euro}€`\n"
+                schedina_text += f"💵 *Payout Stimato:* `{vincita_possibile}€`\n"
+                schedina_text += f"📌 *Esito:* {esito_str}\n"
+                schedina_text += "▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰\n\n"
                 
                 count += 1
             if count > 0:
@@ -121,55 +126,56 @@ async def genera_testo_pronostici():
     except Exception as e:
         logging.error(f"Errore API: {e}")
 
-    # Fallback se non ci sono partite oggi
     if not matches_found:
-        q1, s1, v1 = 1.55, 10, 15.50
-        q2, s2, v2 = 1.70, 10, 17.00
         schedina_text += (
-            "🌟 *Top Match Selezionati dagli Esperti* 🌟\n\n"
+            "🛰️ *[ MODALITA' SIMULAZIONE QUANTISTICA ]*\n\n"
             "1️⃣ **Milan vs Napoli**\n"
-            "🎯 *Pronostico:* 1X + Over 1.5 | 📊 *Quota:* `{}`\n"
-            "💰 *Puntata:* `{}€` | 💵 *Vincita:* `{}€`\n"
-            "📌 *Stato:* ⏳ *In programma*\n"
-            "─────────────────────\n\n"
+            "🎯 *Algoritmo:* 1X + Over 1.5 | 📊 *Quota:* `1.55`\n"
+            "💻 *Stake:* `10€` | 💵 *Payout:* `15.50€`\n"
+            "📌 *Esito:* ⏳ `[ STANDBY ]`\n"
+            "▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰\n\n"
             "2️⃣ **Liverpool vs Chelsea**\n"
-            "🎯 *Pronostico:* Goal | 📊 *Quota:* `{}`\n"
-            "💰 *Puntata:* `{}€` | 💵 *Vincita:* `{}€`\n"
-            "📌 *Stato:* ⏳ *In programma*\n"
-            "─────────────────────\n\n".format(q1, s1, v1, q2, s2, v2)
+            "🎯 *Algoritmo:* Goal | 📊 *Quota:* `1.70`\n"
+            "💻 *Stake:* `10€` | 💵 *Payout:* `17.00€`\n"
+            "📌 *Esito:* ⏳ `[ STANDBY ]`\n"
+            "▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰\n\n"
         )
     
-    schedina_text += "⚠️ *Gioca con responsabilità. Il gioco è vietato ai minori.* 🍀"
+    schedina_text += "⚠️ *Warning: System secure & encrypted. Play safe.*"
     return schedina_text
 
-# 4. Funzione per la Schedina Bomba con calcolo vincita ad alta quota
+# 4. Schedina Bomba in Stile Cyber-Bomba ad altissimo potenziale
 def genera_testo_bomba():
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
-    quota_bomba = 8.50
-    puntata_bomba = 5  # 5€ di tentativo consigliato sulla bomba
+    quota_bomba = 14.20
+    puntata_bomba = 5
     vincita_bomba = round(puntata_bomba * quota_bomba, 2)
     
     testo = (
-        f"━━━━━━━━━━━━━━━━━━━━━\n"
-        f"💣 **AREA VIP: SCHEDINA BOMBA** 💣\n"
-        f"📅 *Data:* `{oggi_ita}`\n"
-        f"━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "🔥 *Combinata speciale ad alto moltiplicatore*\n\n"
-        "🔹 **Combo 1:** 1 + Over 1.5\n"
-        "🔹 **Combo 2:** Goal Squadra Ospite\n"
-        "🔹 **Combo 3:** Multigol 2-4\n\n"
-        "📊 *Quota Totale:* `{}`\n"
-        "💰 *Puntata consigliata:* `{}€` (Stake 1/10)\n"
-        "💵 **VINCITA POSSIBILE:** `⚡ {}€`\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━\n"
-        "⚠️ *Puntare solo il budget di svago!* 🍀".format(quota_bomba, puntata_bomba, vincita_bomba)
+        "╔═════════════════════════╗\n"
+        " ☢️ **CYBER-BOMB PROTOCOL** ☢️\n"
+        f" 📅 *TIMESTAMP:* `{oggi_ita}`\n"
+        "╚═════════════════════════╝\n\n"
+        "⚡ *Analisi combinata ad alto voltaggio (VIP Matrix)*\n\n"
+        "🔹 **Node 01:** Real Madrid vs Inter (Champions League)\n"
+        "   └ *Payload:* `1 + Over 2.5` | 📊 *Quota:* `2.40`\n\n"
+        "🔹 **Node 02:** Bayern Monaco vs Barcellona (Champions League)\n"
+        "   └ *Payload:* `Goal + Over 3.5` | 📊 *Quota:* `2.35`\n\n"
+        "🔹 **Node 03:** Manchester City vs PSG (Champions League)\n"
+        "   └ *Payload:* `1 & Gol` | 📊 *Quota:* `2.50`\n\n"
+        "▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰\n"
+        "📊 *QUOTA TOTAL MATRIX:* `⚡ ~" + str(quota_bomba) + "`\n"
+        "💻 *Unit Risk:* `[ █ ░ ░ ░ ] " + str(puntata_bomba) + "€` (Stake 1/10)\n"
+        "💵 **MAX PAYOUT POTENZIALE:** `🚀 " + str(vincita_bomba) + "€`\n"
+        "▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰\n"
+        "⚠️ *Critical Warning: High risk multiplier sequence.*"
     )
     return testo
 
-# 5. Handler per i comandi e i pulsanti
+# 5. Handlers
 async def pronostici(update: Update, context: ContextTypes.DEFAULT_TYPE):
     testo = await genera_testo_pronostici()
-    keyboard = [[InlineKeyboardButton("🔙 Torna al Menu", callback_data="btn_menu")]]
+    keyboard = [[InlineKeyboardButton("🔙 [ RETURN TO MAIN SYSTEM ]", callback_data="btn_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     if update.message:
@@ -179,7 +185,7 @@ async def pronostici(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def bomba(update: Update, context: ContextTypes.DEFAULT_TYPE):
     testo = genera_testo_bomba()
-    keyboard = [[InlineKeyboardButton("🔙 Torna al Menu", callback_data="btn_menu")]]
+    keyboard = [[InlineKeyboardButton("🔙 [ RETURN TO MAIN SYSTEM ]", callback_data="btn_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     if update.message:
@@ -209,7 +215,7 @@ def main():
     application.add_handler(CommandHandler("bomba", bomba))
     application.add_handler(CallbackQueryHandler(button_handler))
 
-    logging.info("Bot con calcolo vincite avviato con successo!")
+    logging.info("Cybernetic Bot v4.0 avviato con successo!")
     application.run_polling()
 
 if __name__ == '__main__':
