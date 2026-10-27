@@ -11,7 +11,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-TOKEN = "8736023738:AAGfnjI9MURTUKNqbG80Pe4_aah4_IyPfpk"
+TOKEN = "be001fd3625a4f84b61b28e26ba101b2"
 
 # 1. Server web fittizio per mantenere attivo il Web Service gratuito su Render
 class SimpleHandler(BaseHTTPRequestHandler):
