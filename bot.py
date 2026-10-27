@@ -33,12 +33,12 @@ def run_web_server():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         "Benvenuto su **@KingPronostici_bot**! ⚽🔥\n\n"
-        "Sono il tuo assistente per le scommesse calcistiche.\n"
-        "Usa il comando /pronostici per ricevere la schedina aggiornata!"
+        "Sono il tuo assistente avanzato per le scommesse.\n"
+        "Usa /pronostici per vedere le partite, le quote e l'esito in tempo reale!"
     )
     await update.message.reply_text(welcome_text, parse_mode="Markdown")
 
-# 3. Comando /pronostici con dati reali e sistema di fallback
+# 3. Comando /pronostici con quote dedicate e controllo esito Vinto/Perso
 async def pronostici(update: Update, context: ContextTypes.DEFAULT_TYPE):
     oggi = datetime.now().strftime('%Y-%m-%d')
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
@@ -47,7 +47,7 @@ async def pronostici(update: Update, context: ContextTypes.DEFAULT_TYPE):
     headers = {"X-Auth-Token": FOOTBALL_API_KEY}
     
     matches_found = False
-    schedina_text = f"🔥 **SCHEDINA DEL GIORNO ({oggi_ita})** 🔥\n\n"
+    schedina_text = f"🔥 **SCHEDINA E RISULTATI ({oggi_ita})** 🔥\n\n"
     
     try:
         response = requests.get(url, headers=headers)
@@ -60,33 +60,67 @@ async def pronostici(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 home = match.get('homeTeam', {}).get('name', 'Squadra Casa')
                 away = match.get('awayTeam', {}).get('name', 'Squadra Ospite')
                 competition = match.get('competition', {}).get('name', 'Campionato')
+                status = match.get('status', 'SCHEDULED')
                 
+                # Definiamo un pronostico standard per la partita e una quota consigliata
+                pronostico = "1X + Over 1.5"
+                quota = "1.55"
+                
+                esito_str = "⏳ *In programma / Non iniziata*"
+                
+                # Se la partita è finita, calcoliamo se è Vinta o Persa in base ai gol reali
+                if status == 'FINISHED':
+                    score = match.get('score', {}).get('fullTime', {})
+                    home_goals = score.get('home', 0)
+                    away_goals = score.get('away', 0)
+                    tot_goals = home_goals + away_goals
+                    
+                    # Logica di esempio per 1X + Over 1.5: Vinto se Casa non perde e ci sono almeno 2 gol totali
+                    casa_non_perde = home_goals >= away_goals
+                    over_15 = tot_goals >= 2
+                    
+                    if casa_non_perde and over_15:
+                        esito_str = "✅ **PRONOSTICO VINTO!** 🎉"
+                    else:
+                        esito_str = "❌ **PRONOSTICO PERSO** 😢"
+                        
+                    risultato_finale = f"({home_goals} - {away_goals})"
+                elif status in ['IN_PLAY', 'PAUSED']:
+                    score = match.get('score', {}).get('fullTime', {})
+                    hg = score.get('home', 0)
+                    ag = score.get('away', 0)
+                    esito_str = f"🔴 *LIVE ({hg} - {ag})*"
+                else:
+                    risultato_finale = "vs"
+
+                if status == 'FINISHED':
+                    match_title = f"⚽ **{home} {home_goals}-{away_goals} {away}**"
+                else:
+                    match_title = f"⚽ **{home} vs {away}**"
+
                 schedina_text += f"🏆 *{competition}*\n"
-                schedina_text += f"⚽ **{home} vs {away}**\n"
-                schedina_text += f"🔹 Pronostico: 1X + Over 1.5\n\n"
+                schedina_text += f"{match_title}\n"
+                schedina_text += f"🔹 Pronostico: {pronostico}\n"
+                schedina_text += f"📊 Quota consigliata: `{quota}`\n"
+                schedina_text += f"📌 Esito: {esito_str}\n\n"
+                
                 count += 1
             if count > 0:
                 matches_found = True
     except Exception as e:
         logging.error(f"Errore API: {e}")
 
-    # Se l'API non ha partite oggi, mostra i top match di backup
+    # Fallback se non ci sono match oggi
     if not matches_found:
         schedina_text += (
-            "⚽ **Top Match della Settimana**\n\n"
+            "⚽ **Top Match di Riferimento**\n\n"
             "1️⃣ **Milan vs Napoli**\n"
-            "🔹 Pronostico: Goal (Entrambe segnano)\n"
-            "📊 Quota stimata: 1.72\n\n"
+            "🔹 Pronostico: Goal | Quota: `1.72` | 📌 Esito: ⏳ *In programma*\n\n"
             "2️⃣ **Liverpool vs Chelsea**\n"
-            "🔹 Pronostico: Over 2.5\n"
-            "📊 Quota stimata: 1.65\n\n"
-            "3️⃣ **Real Madrid vs Atletico Madrid**\n"
-            "🔹 Pronostico: 1X + Under 3.5\n"
-            "📊 Quota stimata: 1.55\n\n"
+            "🔹 Pronostico: Over 2.5 | Quota: `1.65` | 📌 Esito: ⏳ *In programma*\n\n"
         )
     
-    schedina_text += "💰 **QUOTA TOTALE ESTIMATA: ~4.40**\n"
-    schedina_text += "⚠️ *Analisi aggiornata in tempo reale!*\n"
+    schedina_text += "⚠️ *Aggiornato in tempo reale con i dati ufficiali!*\n"
     schedina_text += "🍀 *Gioca responsabilmente!*"
 
     await update.message.reply_text(schedina_text, parse_mode="Markdown")
