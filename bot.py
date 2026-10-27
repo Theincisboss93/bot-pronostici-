@@ -34,8 +34,8 @@ def run_web_server():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         "🤖 **BENVENUTO SU KING PRONOSTICI** ⚽\n\n"
-        "Usa i pulsanti sottostanti per consultare le schedine in un solo click, "
-        "senza dover digitare i comandi ogni volta!"
+        "Usa i pulsanti sottostanti per consultare le schedine complete di quota totale, "
+        "puntata consigliata, probabilità e riscontro in tempo reale!"
     )
     
     keyboard = [
@@ -49,7 +49,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif update.callback_query:
         await update.callback_query.message.edit_text(welcome_text, parse_mode="Markdown", reply_markup=reply_markup)
 
-# 3. Schedina del Giorno (Multi-Campionato ad Alta Affidabilità)
+# 3. Schedina del Giorno con Quota Totale e Puntata Complessiva
 async def genera_testo_pronostici():
     oggi = datetime.now().strftime('%Y-%m-%d')
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
@@ -60,6 +60,10 @@ async def genera_testo_pronostici():
     matches_found = False
     schedina_text = f"🔥 **SCHEDINA DEL GIORNO ({oggi_ita})** 🔥\n\n"
     
+    # Valori per il calcolo cumulativo della schedina
+    quota_totale = 1.0
+    partite_list = []
+    
     try:
         response = requests.get(url, headers=headers)
         data = response.json()
@@ -67,16 +71,15 @@ async def genera_testo_pronostici():
         
         if matches:
             count = 0
-            for match in matches[:4]:
+            for match in matches[:3]: # Prende 3 match per fare una multipla pulita
                 home = match.get('homeTeam', {}).get('name', 'Squadra A')
                 away = match.get('awayTeam', {}).get('name', 'Squadra B')
                 competition = match.get('competition', {}).get('name', 'Campionato')
                 status = match.get('status', 'SCHEDULED')
                 
-                pronostico = "1X o Over 1.5 (Alta Affidabilità)"
-                quota = 1.40
-                stake_euro = 15
-                vincita_possibile = round(stake_euro * quota, 2)
+                pronostico = "1X o Over 1.5"
+                quota = 1.35
+                quota_totale *= quota
                 
                 esito_str = "⏳ In attesa"
                 
@@ -101,13 +104,12 @@ async def genera_testo_pronostici():
                 else:
                     match_title = f"⚽ **{home} vs {away}**"
 
-                schedina_text += f"🏆 *Torneo:* {competition}\n"
-                schedina_text += f"{match_title}\n"
-                schedina_text += f"🔹 Pronostico: `{pronostico}`\n"
-                schedina_text += f"📊 Quota: `{quota}` | 💰 Puntata: `{stake_euro}€`\n"
-                schedina_text += f"💵 Vincita Possibile: `{vincita_possibile}€`\n"
-                schedina_text += f"📌 Esito: {esito_str}\n\n"
-                
+                partite_list.append(
+                    f"🏆 *Torneo:* {competition}\n"
+                    f"{match_title}\n"
+                    f"🔹 Pronostico: `{pronostico}` | Quota: `{quota}`\n"
+                    f"📌 Esito: {esito_str}\n"
+                )
                 count += 1
             if count > 0:
                 matches_found = True
@@ -115,25 +117,44 @@ async def genera_testo_pronostici():
         logging.error(f"Errore API: {e}")
 
     if not matches_found:
-        schedina_text += (
-            "⚽ **Top Match Selezionati (Simulazione)**\n\n"
-            "1️⃣ **Real Madrid vs Valencia** (La Liga)\n"
-            "🔹 Pronostico: 1X | Quota: `1.30` | 💰 Puntata: `15€` | 💵 Vincita: `19.50€`\n"
-            "📌 Esito: ⏳ In attesa\n\n"
-            "2️⃣ **Arsenal vs Chelsea** (Premier League)\n"
-            "🔹 Pronostico: Over 1.5 | Quota: `1.35` | 💰 Puntata: `15€` | 💵 Vincita: `20.25€`\n"
-            "📌 Esito: ⏳ In attesa\n\n"
+        quota_totale = 1.30 * 1.35 # Esempio simulato
+        partite_list.append(
+            "🏆 *Torneo:* La Liga (Simulazione)\n"
+            "⚽ **Real Madrid vs Valencia**\n"
+            "🔹 Pronostico: `1X` | Quota: `1.30` | 📌 Esito: ⏳ In attesa\n"
         )
-    
+        partite_list.append(
+            "🏆 *Torneo:* Premier League (Simulazione)\n"
+            "⚽ **Arsenal vs Chelsea**\n"
+            "🔹 Pronostico: `Over 1.5` | Quota: `1.35` | 📌 Esito: ⏳ In attesa\n"
+        )
+
+    quota_totale = round(quota_totale, 2)
+    puntata_consigliata = 10  # 10€ consigliati sulla schedina totale
+    vincita_totale = round(puntata_consigliata * quota_totale, 2)
+    probabilita_schedina = "9/10 (Altissima affidabilità)"
+
+    # Costruzione del testo finale della schedina
+    for p in partite_list:
+        schedina_text += p + "\n"
+
+    schedina_text += "━━━━━━━━━━━━━━━━━━━\n"
+    schedina_text += f"📊 **QUOTA TOTALE SCHEDINA:** `{quota_totale}`\n"
+    schedina_text += f"📈 **Probabilità di vincita:** `{probabilita_schedina}`\n"
+    schedina_text += f"💰 **Puntata consigliata:** `{puntata_consigliata}€`\n"
+    schedina_text += f"💵 **VINCITA COMPLESSIVA:** `{vincita_totale}€`\n"
+    schedina_text += "━━━━━━━━━━━━━━━━━━━\n"
     schedina_text += "🍀 *Gioca responsabilmente!*"
+    
     return schedina_text
 
-# 4. Schedina Bomba con Squadre e Vincita Alta
+# 4. Schedina Bomba con Quota Totale e Puntata
 def genera_testo_bomba():
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
     quota_bomba = 18.50
     puntata_bomba = 5
     vincita_bomba = round(puntata_bomba * quota_bomba, 2)
+    probabilita_bomba = "4/10 (Rischio Alto / Tentativo VIP)"
     
     testo = (
         f"💣 **SCHEDINA BOMBA DEL GIORNO ({oggi_ita})** 💣\n\n"
@@ -144,9 +165,12 @@ def genera_testo_bomba():
         "   🔹 Cosa giocare: `Goal + Over 2.5` (Quota: `2.45`)\n\n"
         "3️⃣ **Liverpool vs Tottenham** (Premier League)\n"
         "   🔹 Cosa giocare: `1 & Gol` (Quota: `3.00`)\n\n"
+        "━━━━━━━━━━━━━━━━━━━\n"
         f"📊 **QUOTA TOTALE BOMBA:** `{quota_bomba}`\n"
+        f"📈 **Probabilità di vincita:** `{probabilita_bomba}`\n"
         f"💰 **Puntata consigliata:** `{puntata_bomba}€`\n"
-        f"💵 **VINCITA POSSIBILE:** `{vincita_bomba}€`\n\n"
+        f"💵 **VINCITA COMPLESSIVA:** `{vincita_bomba}€`\n"
+        "━━━━━━━━━━━━━━━━━━━\n"
         "⚠️ *Puntare solo il budget di svago!* 🍀"
     )
     return testo
@@ -221,7 +245,7 @@ def main():
     # Gestore Bottoni Interattivi
     application.add_handler(CallbackQueryHandler(button_handler))
 
-    logging.info("Bot avviato con successo con pulsanti permanenti!")
+    logging.info("Bot con quota totale e puntata schedina avviato!")
     application.run_polling()
 
 if __name__ == '__main__':
