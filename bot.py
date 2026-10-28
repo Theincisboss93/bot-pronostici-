@@ -68,9 +68,9 @@ async def genera_testo_schedina(tipo_sicurezza):
         titolo_schedina = f"🛡️ **SCHEDINA 100% SICURA ({oggi_ita})** 🛡️"
         prob_str = "10/10 (Massima Affidabilità)"
         puntata_consigliata = 20
-         pronostico_base = "1X o Over 1.5"
-         quota_singola = 1.25
-         max_partite = 3
+        pronostico_base = "1X o Over 1.5"
+        quota_singola = 1.25
+        max_partite = 3
     elif tipo_sicurezza == "70":
         titolo_schedina = f"⚖️ **SCHEDINA 70% SICURA ({oggi_ita})** ⚖️"
         prob_str = "7/10 (Equilibrio Rischio/Profitto)"
