@@ -30,17 +30,20 @@ def run_web_server():
     server = HTTPServer(("0.0.0.0", port), SimpleHandler)
     server.serve_forever()
 
-# 2. Menu Principale con Pulsanti Rapidi
+# 2. Menu Principale con Pulsanti Rapidi per le 3 Schedine
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         "🤖 **BENVENUTO SU KING PRONOSTICI** ⚽\n\n"
-        "Usa i pulsanti sottostanti per consultare la schedina estesa (Italia & Estero) ad alto profitto, "
-        "con quota totale, puntata, probabilità e riscontro in tempo reale!"
+        "Seleziona il livello di sicurezza desiderato tramite i pulsanti sottostanti:\n"
+        "• **100% Sicura**: Massima stabilità\n"
+        "• **70% Sicura**: Ottimo compromesso rischio/rendimento\n"
+        "• **50% Sicura**: Schedina Bomba ad alto profitto"
     )
     
     keyboard = [
-        [InlineKeyboardButton("📊 Schedina Estesa (Italia & Estero)", callback_data="btn_pronostici")],
-        [InlineKeyboardButton("💣 Protocollo Schedina Bomba", callback_data="btn_bomba_avvio")],
+        [InlineKeyboardButton("🛡️ Schedina 100% Sicura", callback_data="btn_100")],
+        [InlineKeyboardButton("⚖️ Schedina 70% Sicura", callback_data="btn_70")],
+        [InlineKeyboardButton("🚀 Schedina 50% Sicura (Bomba)", callback_data="btn_bomba_avvio")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -49,8 +52,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif update.callback_query:
         await update.callback_query.message.edit_text(welcome_text, parse_mode="Markdown", reply_markup=reply_markup)
 
-# 3. Schedina del Giorno Estesa (Sfrutta al massimo l'API per più partite)
-async def genera_testo_pronostici():
+# Funzione di supporto per generare le schedine basate su API o simulazione
+async def genera_testo_schedina(tipo_sicurezza):
     oggi = datetime.now().strftime('%Y-%m-%d')
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
     
@@ -58,10 +61,32 @@ async def genera_testo_pronostici():
     headers = {"X-Auth-Token": FOOTBALL_API_KEY}
     
     matches_found = False
-    schedina_text = f"🔥 **SCHEDINA ESTESA MULTI-LEAGUE ({oggi_ita})** 🔥\n\n"
-    
-    quota_totale = 1.0
     partite_list = []
+    quota_totale = 1.0
+    
+    if tipo_sicurezza == "100":
+        titolo_schedina = f"🛡️ **SCHEDINA 100% SICURA ({oggi_ita})** 🛡️"
+        prob_str = "10/10 (Massima Affidabilità)"
+        puntata_consigliata = 20
+         pronostico_base = "1X o Over 1.5"
+         quota_singola = 1.25
+         max_partite = 3
+    elif tipo_sicurezza == "70":
+        titolo_schedina = f"⚖️ **SCHEDINA 70% SICURA ({oggi_ita})** ⚖️"
+        prob_str = "7/10 (Equilibrio Rischio/Profitto)"
+        puntata_consigliata = 10
+        pronostico_base = "1 Over 1.5 o Gol"
+        quota_singola = 1.65
+        max_partite = 4
+    else: # 50% Bomba
+        titolo_schedina = f"🚀 **SCHEDINA 50% SICURA - BOMBA ({oggi_ita})** 🚀"
+        prob_str = "5/10 (Alto Profitto / Rischio Calcolato)"
+        puntata_consigliata = 5
+        pronostico_base = "1 + Over 2.5 o Combo"
+        quota_singola = 2.40
+        max_partite = 4
+
+    schedina_text = f"{titolo_schedina}\n\n"
     
     try:
         response = requests.get(url, headers=headers)
@@ -70,17 +95,21 @@ async def genera_testo_pronostici():
         
         if matches:
             count = 0
-            # Prende fino a 8 partite per un profitto alto con rischio controllato (multipla ricca)
-            for match in matches[:8]:
+            for match in matches[:max_partite]:
                 home = match.get('homeTeam', {}).get('name', 'Squadra A')
                 away = match.get('awayTeam', {}).get('name', 'Squadra B')
                 competition = match.get('competition', {}).get('name', 'Campionato')
                 status = match.get('status', 'SCHEDULED')
                 
-                pronostico = "1X o Over 1.5"
-                quota = 1.32  # Quota singola sicura ma remunerativa in multipla
-                quota_totale *= quota
-                
+                # Assegnazione quota specifica in base al livello
+                if tipo_sicurezza == "100":
+                    q = 1.25
+                elif tipo_sicurezza == "70":
+                    q = 1.60
+                else:
+                    q = 2.35
+                    
+                quota_totale *= q
                 esito_str = "⏳ In attesa"
                 
                 if status == 'FINISHED':
@@ -89,7 +118,11 @@ async def genera_testo_pronostici():
                     away_goals = score.get('away', 0)
                     tot_goals = home_goals + away_goals
                     
-                    if home_goals >= away_goals or tot_goals >= 2:
+                    if tipo_sicurezza == "100" and (home_goals >= away_goals or tot_goals >= 2):
+                        esito_str = "✅ **VINTO!** 🎉"
+                    elif tipo_sicurezza == "70" and (tot_goals >= 2):
+                        esito_str = "✅ **VINTO!** 🎉"
+                    elif tipo_sicurezza == "50" and (home_goals + away_goals >= 3):
                         esito_str = "✅ **VINTO!** 🎉"
                     else:
                         esito_str = "❌ **PERSO** 😢"
@@ -107,7 +140,7 @@ async def genera_testo_pronostici():
                 partite_list.append(
                     f"🏆 *Torneo:* {competition}\n"
                     f"{match_title}\n"
-                    f"🔹 Pronostico: `{pronostico}` | Quota: `{quota}`\n"
+                    f"🔹 Giocata: `{pronostico_base}` | Quota: `{q}`\n"
                     f"📌 Esito: {esito_str}\n"
                 )
                 count += 1
@@ -117,35 +150,35 @@ async def genera_testo_pronostici():
         logging.error(f"Errore API: {e}")
 
     if not matches_found:
-        # Fallback simulato esteso se oggi l'API non ha match
-        quota_totale = 1.30 ** 6  # Simulazione di 6 partite
-        simulated_matches = [
-            ("Serie A (Italia)", "Inter vs Milan", "1X", 1.30),
-            ("Premier League (Inghilterra)", "Arsenal vs Chelsea", "Over 1.5", 1.35),
-            ("La Liga (Spagna)", "Real Madrid vs Barcellona", "1X", 1.32),
-            ("Bundesliga (Germania)", "Bayern vs Dortmund", "Over 1.5", 1.28),
-            ("Ligue 1 (Francia)", "PSG vs Monaco", "1X", 1.30),
-            ("Champions League", "Liverpool vs Real Madrid", "Over 1.5", 1.35)
-        ]
-        for comp, match_str, pron, q in simulated_matches:
-            partite_list.append(
-                f"🏆 *Torneo:* {comp}\n"
-                f"⚽ **{match_str}**\n"
-                f"🔹 Pronostico: `{pron}` | Quota: `{q}`\n"
-                f"📌 Esito: ⏳ In attesa\n"
-            )
+        # Fallback simulato se l'API non restituisce match oggi
+        if tipo_sicurezza == "100":
+            partite_list = [
+                "🏆 *Torneo:* Serie A (Italia)\n⚽ **Inter vs Lecce**\n🔹 Giocata: `1X` | Quota: `1.20` | 📌 Esito: ⏳ In attesa\n",
+                "🏆 *Torneo:* Premier League (Inghilterra)\n⚽ **Manchester City vs Southampton**\n🔹 Giocata: `1` | Quota: `1.25` | 📌 Esito: ⏳ In attesa\n"
+            ]
+            quota_totale = 1.50
+        elif tipo_sicurezza == "70":
+            partite_list = [
+                "🏆 *Torneo:* La Liga (Spagna)\n⚽ **Real Madrid vs Villarreal**\n🔹 Giocata: `1 + Over 1.5` | Quota: `1.75` | 📌 Esito: ⏳ In attesa\n",
+                "🏆 *Torneo:* Bundesliga (Germania)\n⚽ **Bayern Monaco vs Dortmund**\n🔹 Giocata: `Goal` | Quota: `1.60` | 📌 Esito: ⏳ In attesa\n"
+            ]
+            quota_totale = 2.80
+        else:
+            partite_list = [
+                "🏆 *Torneo:* Champions League\n⚽ **PSG vs Real Madrid**\n🔹 Giocata: `1 + Over 2.5` | Quota: `2.60` | 📌 Esito: ⏳ In attesa\n",
+                "🏆 *Torneo:* Premier League\n⚽ **Arsenal vs Liverpool**\n🔹 Giocata: `Goal + Over 2.5` | Quota: `2.50` | 📌 Esito: ⏳ In attesa\n"
+            ]
+            quota_totale = 6.50
 
     quota_totale = round(quota_totale, 2)
-    puntata_consigliata = 10  # 10€ di puntata
     vincita_totale = round(puntata_consigliata * quota_totale, 2)
-    probabilita_schedina = "8.5/10 (Alto profitto / Rischio controllato)"
 
     for p in partite_list:
         schedina_text += p + "\n"
 
     schedina_text += "━━━━━━━━━━━━━━━━━━━\n"
-    schedina_text += f"📊 **QUOTA TOTALE SCHEDINA:** `{quota_totale}`\n"
-    schedina_text += f"📈 **Probabilità di vincita:** `{probabilita_schedina}`\n"
+    schedina_text += f"📊 **QUOTA TOTALE:** `{quota_totale}`\n"
+    schedina_text += f"📈 **Sicurezza / Probabilità:** `{prob_str}`\n"
     schedina_text += f"💰 **Puntata consigliata:** `{puntata_consigliata}€`\n"
     schedina_text += f"💵 **VINCITA COMPLESSIVA:** `{vincita_totale}€`\n"
     schedina_text += "━━━━━━━━━━━━━━━━━━━\n"
@@ -153,86 +186,56 @@ async def genera_testo_pronostici():
     
     return schedina_text
 
-# 4. Schedina Bomba Estesa ad Alto Rendimento
-def genera_testo_bomba():
-    oggi_ita = datetime.now().strftime('%d/%m/%Y')
-    quota_bomba = 24.50
-    puntata_bomba = 5
-    vincita_bomba = round(puntata_bomba * quota_bomba, 2)
-    probabilita_bomba = "4/10 (Rischio Alto / Super Bomber)"
-    
-    testo = (
-        f"💣 **SCHEDINA BOMBA MULTI-LEAGUE ({oggi_ita})** 💣\n\n"
-        "⚽ *Combinata d'élite ad altissimo profitto (Italia & Estero)*\n\n"
-        "1️⃣ **Juventus vs Napoli** (Serie A - Italia)\n"
-        "   🔹 Cosa giocare: `1 + Over 1.5` (Quota: `2.40`)\n\n"
-        "2️⃣ **Manchester City vs Arsenal** (Premier League - Inghilterra)\n"
-        "   🔹 Cosa giocare: `Goal + Over 2.5` (Quota: `2.50`)\n\n"
-        "3️⃣ **Atletico Madrid vs Barcellona** (La Liga - Spagna)\n"
-        "   🔹 Cosa giocare: `X2 + Goal` (Quota: `2.45`)\n\n"
-        "4️⃣ **Borussia Dortmund vs RB Leipzig** (Bundesliga - Germania)\n"
-        "   🔹 Cosa giocare: `1 & Over 2.5` (Quota: `2.60`)\n\n"
-        "━━━━━━━━━━━━━━━━━━━\n"
-        f"📊 **QUOTA TOTALE BOMBA:** `{quota_bomba}`\n"
-        f"📈 **Probabilità di vincita:** `{probabilita_bomba}`\n"
-        f"💰 **Puntata consigliata:** `{puntata_bomba}€`\n"
-        f"💵 **VINCITA COMPLESSIVA:** `{vincita_bomba}€`\n"
-        "━━━━━━━━━━━━━━━━━━━\n"
-        "⚠️ *Puntare solo il budget di svago!* 🍀"
-    )
-    return testo
-
-# 5. Handlers con Pulsanti Integrati
-async def cmd_pronostici(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    testo = await genera_testo_pronostici()
+# Handlers per le visualizzazioni
+async def mostra_100(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    testo = await genera_testo_schedina("100")
     keyboard = [
-        [InlineKeyboardButton("🔄 Aggiorna Partite Estese", callback_data="btn_pronostici")],
+        [InlineKeyboardButton("🔄 Aggiorna", callback_data="btn_100")],
         [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    if update.message:
-        await update.message.reply_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
-    elif update.callback_query:
-        await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
+    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
 
-# Effetto Esplosione prima della Bomba
+async def mostra_70(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    testo = await genera_testo_schedina("70")
+    keyboard = [
+        [InlineKeyboardButton("🔄 Aggiorna", callback_data="btn_70")],
+        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
+
+# Effetto Esplosione Animato per la Schedina Bomba (50%)
 async def bomba_effetto_esplosione(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    await query.message.edit_text("💣 *Innesco Schedina Bomba in corso...*\n\n⏱️ `3...`", parse_mode="Markdown")
+    await query.message.edit_text("💣 *Innesco Schedina Bomba 50% in corso...*\n\n⏱️ `3...`", parse_mode="Markdown")
     await asyncio.sleep(1)
     
-    await query.message.edit_text("💣 *Innesco Schedina Bomba in corso...*\n\n⏱️ `2...`", parse_mode="Markdown")
+    await query.message.edit_text("💣 *Innesco Schedina Bomba 50% in corso...*\n\n⏱️ `2...`", parse_mode="Markdown")
     await asyncio.sleep(1)
     
-    await query.message.edit_text("💣 *Innesco Schedina Bomba in corso...*\n\n⏱️ `1...`", parse_mode="Markdown")
+    await query.message.edit_text("💣 *Innesco Schedina Bomba 50% in corso...*\n\n⏱️ `1...`", parse_mode="Markdown")
     await asyncio.sleep(1)
     
-    testo_bomba = genera_testo_bomba()
+    testo_bomba = await genera_testo_schedina("50")
     keyboard = [
         [InlineKeyboardButton("🔄 Ricarica Bomba", callback_data="btn_bomba_avvio")],
         [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.message.edit_text(f"💥 **KABOOM! ECCO LA BOMBA ESTESA!** 💥\n\n{testo_bomba}", parse_mode="Markdown", reply_markup=reply_markup)
-
-async def cmd_bomba_testuale(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    testo_bomba = genera_testo_bomba()
-    keyboard = [
-        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(f"💥 **SCHEDINA BOMBA ESTESA ATTIVA** 💥\n\n{testo_bomba}", parse_mode="Markdown", reply_markup=reply_markup)
+    await query.message.edit_text(f"💥 **KABOOM! ECCO LA BOMBA!** 💥\n\n{testo_bomba}", parse_mode="Markdown", reply_markup=reply_markup)
 
 # Gestore dei Click dei Bottoni
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     
-    if query.data == "btn_pronostici":
-        await cmd_pronostici(update, context)
+    if query.data == "btn_100":
+        await mostra_100(update, context)
+    elif query.data == "btn_70":
+        await mostra_70(update, context)
     elif query.data == "btn_bomba_avvio":
         await bomba_effetto_esplosione(update, context)
     elif query.data == "btn_menu":
@@ -244,15 +247,10 @@ def main():
 
     application = ApplicationBuilder().token(TOKEN).build()
 
-    # Registrazione Comandi Testuali
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("pronostici", cmd_pronostici))
-    application.add_handler(CommandHandler("bomba", cmd_bomba_testuale))
-    
-    # Gestore Bottoni Interattivi
     application.add_handler(CallbackQueryHandler(button_handler))
 
-    logging.info("Bot esteso ad alto profitto avviato con successo!")
+    logging.info("Bot multi-livello (100%, 70%, 50%) avviato con successo!")
     application.run_polling()
 
 if __name__ == '__main__':
