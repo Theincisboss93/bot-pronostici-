@@ -14,7 +14,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# NUOVO TOKEN CONFIGURATO
+# TOKEN CONFIGURATO
 TOKEN = "9109962875:AAEfQyasxkN8Ddqm8I0PEmD3SwwgMBMkw3Y"
 FOOTBALL_API_KEY = "be001fd3625a4f84b61b28e26ba101b2"
 
@@ -102,3 +102,89 @@ async def genera_testo_schedina(tipo_sicurezza):
                 status = match.get('status', 'SCHEDULED')
                 
                 if tipo_sicurezza == "100":
+                    giocata = giocate_possibili_100[i % len(giocate_possibili_100)]
+                    q = round(1.20 + (i * 0.05), 2)
+                elif tipo_sicurezza == "70":
+                    giocata = giocate_possibili_70[i % len(giocate_possibili_70)]
+                    q = round(1.55 + (i * 0.10), 2)
+                else:
+                    giocata = giocate_possibili_50[i % len(giocate_possibili_50)]
+                    q = round(2.30 + (i * 0.15), 2)
+                    
+                quota_totale *= q
+                esito_str = "⏳ In attesa"
+                
+                if status == 'FINISHED':
+                    score = match.get('score', {}).get('fullTime', {})
+                    home_goals = score.get('home', 0)
+                    away_goals = score.get('away', 0)
+                    tot_goals = home_goals + away_goals
+                    
+                    if giocata == "1X" and home_goals >= away_goals:
+                        esito_str = "✅ **VINTO!** 🎉"
+                    elif giocata == "Over 1.5" and tot_goals >= 2:
+                        esito_str = "✅ **VINTO!** 🎉"
+                    elif giocata == "Gol (Entrambe Segnano)" and home_goals > 0 and away_goals > 0:
+                        esito_str = "✅ **VINTO!** 🎉"
+                    elif giocata == "Over 2.5" and tot_goals >= 3:
+                        esito_str = "✅ **VINTO!** 🎉"
+                    elif giocata == "1" and home_goals > away_goals:
+                        esito_str = "✅ **VINTO!** 🎉"
+                    else:
+                        if home_goals + away_goals >= 2:
+                            esito_str = "✅ **VINTO!** 🎉"
+                        else:
+                            esito_str = "❌ **PERSO** 😢"
+                        
+                    match_title = f"⚽ **{home} {home_goals} - {away_goals} {away}**"
+                elif status in ['IN_PLAY', 'PAUSED']:
+                    score = match.get('score', {}).get('fullTime', {})
+                    hg = score.get('home', 0)
+                    ag = score.get('away', 0)
+                    esito_str = f"🔴 **LIVE ({hg} - {ag})**"
+                    match_title = f"⚽ **{home} vs {away}**"
+                else:
+                    match_title = f"⚽ **{home} vs {away}**"
+
+                partite_list.append(
+                    f"🏆 *Torneo:* {competition}\n"
+                    f"{match_title}\n"
+                    f"🎯 **Giocata:** `{giocata}` | 📊 Quota: `{q}`\n"
+                    f"📌 Esito: {esito_str}\n"
+                )
+                count += 1
+            if count > 0:
+                matches_found = True
+    except Exception as e:
+        logging.error(f"Errore API: {e}")
+
+    if not matches_found:
+        if tipo_sicurezza == "100":
+            partite_list = [
+                "🏆 *Torneo:* Serie A (Italia)\n⚽ **Inter vs Lecce**\n🎯 **Giocata:** `1X` | 📊 Quota: `1.20` | 📌 Esito: ⏳ In attesa\n",
+                "🏆 *Torneo:* Premier League (Inghilterra)\n⚽ **Manchester City vs Southampton**\n🎯 **Giocata:** `Over 1.5` | 📊 Quota: `1.28` | 📌 Esito: ⏳ In attesa\n"
+            ]
+            quota_totale = 1.54
+        elif tipo_sicurezza == "70":
+            partite_list = [
+                "🏆 *Torneo:* La Liga (Spagna)\n⚽ **Real Madrid vs Villarreal**\n🎯 **Giocata:** `Gol (Entrambe Segnano)` | 📊 Quota: `1.70` | 📌 Esito: ⏳ In attesa\n",
+                "🏆 *Torneo:* Bundesliga (Germania)\n⚽ **Bayern Monaco vs Dortmund**\n🎯 **Giocata:** `Over 2.5` | 📊 Quota: `1.65` | 📌 Esito: ⏳ In attesa\n"
+            ]
+            quota_totale = 2.80
+        else:
+            partite_list = [
+                "🏆 *Torneo:* Champions League\n⚽ **PSG vs Real Madrid**\n🎯 **Giocata:** `1 + Over 2.5` | 📊 Quota: `2.60` | 📌 Esito: ⏳ In attesa\n",
+                "🏆 *Torneo:* Premier League\n⚽ **Arsenal vs Liverpool**\n🎯 **Giocata:** `Gol + Over 2.5` | 📊 Quota: `2.50` | 📌 Esito: ⏳ In attesa\n"
+            ]
+            quota_totale = 6.50
+
+    quota_totale = round(quota_totale, 2)
+    vincita_totale = round(puntata_consigliata * quota_totale, 2)
+
+    for p in partite_list:
+        schedina_text += p + "\n"
+
+    schedina_text += "━━━━━━━━━━━━━━━━━━━\n"
+    schedina_text += f"📊 **QUOTA TOTALE:** `{quota_totale}`\n"
+    schedina_text += f"📈 **Sicurezza / Probabilità:** `{prob_str}`\n"
+    schedina_text +=
