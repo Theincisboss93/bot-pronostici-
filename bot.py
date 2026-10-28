@@ -18,19 +18,22 @@ logging.basicConfig(
 TOKEN = "9109962875:AAEfQyasxkN8Ddqm8I0PEmD3SwwgMBMkw3Y"
 FOOTBALL_API_KEY = "be001fd3625a4f84b61b28e26ba101b2"
 
-# 1. Server web fittizio per Render (Piano Free)
+# 1. Server web fittizio per Render (Mantiene attiva l'istanza)
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"Bot is online!")
+        self.wfile.write(b"Bot is online and running!")
+        
+    def log_message(self, format, *args):
+        return # Evita di intasare i log con le richieste di ping HTTP
 
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(("0.0.0.0", port), SimpleHandler)
     server.serve_forever()
 
-# 2. Menu Principale con i 4 Pulsanti (3 Schedine + Bomba Giornaliera)
+# 2. Menu Principale con i 4 Pulsanti
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         "🤖 **BENVENUTO SU KING PRONOSTICI** ⚽\n\n"
@@ -89,7 +92,7 @@ async def genera_testo_schedina(tipo_sicurezza):
     schedina_text = f"{titolo_schedina}\n\n"
     
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=5)
         data = response.json()
         matches = data.get("matches", [])
         
@@ -131,16 +134,13 @@ async def genera_testo_schedina(tipo_sicurezza):
                     elif giocata == "1" and home_goals > away_goals:
                         esito_str = "✅ **VINTO!** 🎉"
                     else:
-                        if home_goals + away_goals >= 2:
-                            esito_str = "✅ **VINTO!** 🎉"
-                        else:
-                            esito_str = "❌ **PERSO** 😢"
+                        esito_str = "❌ **PERSO** 😢"
                         
                     match_title = f"⚽ **{home} {home_goals} - {away_goals} {away}**"
                 elif status in ['IN_PLAY', 'PAUSED']:
                     score = match.get('score', {}).get('fullTime', {})
                     hg = score.get('home', 0)
-                    ag = score.get('score', {}).get('away', 0)
+                    ag = score.get('away', 0)
                     esito_str = f"🔴 **LIVE ({hg} - {ag})**"
                     match_title = f"⚽ **{home} vs {away}**"
                 else:
@@ -192,4 +192,168 @@ async def genera_testo_schedina(tipo_sicurezza):
     schedina_text += "━━━━━━━━━━━━━━━━━━━\n"
     schedina_text += "🍀 *Gioca responsabilmente!*"
     
-    return
+    return schedina_text
+
+# Generatore Schedina Bomba VIP
+async def genera_testo_bomba():
+    oggi = datetime.now().strftime('%Y-%m-%d')
+    oggi_ita = datetime.now().strftime('%d/%m/%Y')
+    
+    url = f"https://api.football-data.org/v4/matches?date={oggi}"
+    headers = {"X-Auth-Token": FOOTBALL_API_KEY}
+    
+    partite_bomba_list = []
+    quota_bomba = 1.0
+    puntata_bomba = 5
+    bomba_trovata = False
+    
+    giocate_bomba = ["1 + Over 1.5", "Gol + Over 2.5", "2 + Over 1.5", "1 & Gol"]
+
+    try:
+        response = requests.get(url, headers=headers, timeout=5)
+        data = response.json()
+        matches = data.get("matches", [])
+        
+        if matches and len(matches) >= 3:
+            for i, match in enumerate(matches[:4]):
+                home = match.get('homeTeam', {}).get('name', 'Squadra A')
+                away = match.get('awayTeam', {}).get('name', 'Squadra B')
+                competition = match.get('competition', {}).get('name', 'Campionato')
+                status = match.get('status', 'SCHEDULED')
+                
+                giocata = giocate_bomba[i % len(giocate_bomba)]
+                q = round(2.30 + (i * 0.35), 2)
+                quota_bomba *= q
+                
+                esito_str = "⏳ In attesa"
+                if status == 'FINISHED':
+                    score = match.get('score', {}).get('fullTime', {})
+                    hg = score.get('home', 0)
+                    ag = score.get('away', 0)
+                    esito_str = "✅ **VINTO!** 🎉" if (hg + ag) >= 2 else "❌ **PERSO** 😢"
+                    match_title = f"⚽ **{home} {hg} - {ag} {away}**"
+                elif status in ['IN_PLAY', 'PAUSED']:
+                    score = match.get('score', {}).get('fullTime', {})
+                    hg = score.get('home', 0)
+                    ag = score.get('away', 0)
+                    esito_str = f"🔴 **LIVE ({hg} - {ag})**"
+                    match_title = f"⚽ **{home} vs {away}**"
+                else:
+                    match_title = f"⚽ **{home} vs {away}**"
+
+                partite_bomba_list.append(
+                    f"🏆 *Torneo:* {competition}\n"
+                    f"{match_title}\n"
+                    f"🎯 **Giocata:** `{giocata}` | 📊 Quota: `{q}`\n"
+                    f"📌 Esito: {esito_str}\n"
+                )
+            bomba_trovata = True
+    except Exception as e:
+        logging.error(f"Errore API Bomba: {e}")
+
+    if not bomba_trovata:
+        quota_bomba = 24.50
+        partite_bomba_list = [
+            "🏆 *Torneo:* Serie A (Italia)\n⚽ **AC Milan vs Napoli**\n🎯 **Giocata:** `1 + Over 1.5` | 📊 Quota: `2.40` | 📌 Esito: ⏳ In attesa\n",
+            "🏆 *Torneo:* La Liga (Spagna)\n⚽ **Real Madrid vs Barcellona**\n🎯 **Giocata:** `Gol + Over 2.5` | 📊 Quota: `2.50` | 📌 Esito: ⏳ In attesa\n",
+            "🏆 *Torneo:* Premier League (Inghilterra)\n⚽ **Arsenal vs Manchester City**\n🎯 **Giocata:** `1 & Gol` | 📊 Quota: `3.00` | 📌 Esito: ⏳ In attesa\n"
+        ]
+
+    quota_bomba = round(quota_bomba, 2)
+    vincita_bomba = round(puntata_bomba * quota_bomba, 2)
+
+    testo = f"💣 **SCHEDINA BOMBA VIP DEL GIORNO ({oggi_ita})** 💣\n\n"
+    testo += "⚽ *Combinata ad altissimo rendimento con i match odierni*\n\n"
+    
+    for p in partite_bomba_list:
+        testo += p + "\n"
+
+    testo += "━━━━━━━━━━━━━━━━━━━\n"
+    testo += f"📊 **QUOTA TOTALE BOMBA:** `{quota_bomba}`\n"
+    testo += f"📈 **Sicurezza:** `3.5/10 (Rischio Alto VIP)`\n"
+    testo += f"💰 **Puntata consigliata:** `{puntata_bomba}€`\n"
+    testo += f"💵 **VINCITA COMPLESSIVA:** `{vincita_bomba}€`\n"
+    testo += "━━━━━━━━━━━━━━━━━━━\n"
+    testo += "⚠️ *Puntare solo il budget di svago!* 🍀"
+    
+    return testo
+
+# Effetto animato rapido e apertura immediata della Bomba
+async def bomba_effetto_esplosione(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    await query.message.edit_text("💣 *Innesco Schedina Bomba VIP in corso...*\n\n⏱️ `3...`", parse_mode="Markdown")
+    await asyncio.sleep(0.5)
+    await query.message.edit_text("💣 *Innesco Schedina Bomba VIP in corso...*\n\n⏱️ `2...`", parse_mode="Markdown")
+    await asyncio.sleep(0.5)
+    await query.message.edit_text("💣 *Innesco Schedina Bomba VIP in corso...*\n\n⏱️ `1...`", parse_mode="Markdown")
+    await asyncio.sleep(0.5)
+    
+    testo_bomba = await genera_testo_bomba()
+    keyboard_bomba = [
+        [InlineKeyboardButton("🔄 Aggiorna Bomba", callback_data="btn_bomba_avvio")],
+        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
+    ]
+    reply_markup_bomba = InlineKeyboardMarkup(keyboard_bomba)
+    await query.message.edit_text(testo_bomba, parse_mode="Markdown", reply_markup=reply_markup_bomba)
+
+# Visualizzatori delle Schedine standard
+async def mostra_100(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    testo = await genera_testo_schedina("100")
+    keyboard = [
+        [InlineKeyboardButton("🔄 Aggiorna", callback_data="btn_100")],
+        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
+
+async def mostra_70(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    testo = await genera_testo_schedina("70")
+    keyboard = [
+        [InlineKeyboardButton("🔄 Aggiorna", callback_data="btn_70")],
+        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
+
+async def mostra_50(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    testo = await genera_testo_schedina("50")
+    keyboard = [
+        [InlineKeyboardButton("🔄 Aggiorna", callback_data="btn_50")],
+        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
+
+# Gestore dei Click dei Bottoni
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    
+    if query.data == "btn_100":
+        await mostra_100(update, context)
+    elif query.data == "btn_70":
+        await mostra_70(update, context)
+    elif query.data == "btn_50":
+        await mostra_50(update, context)
+    elif query.data == "btn_bomba_avvio":
+        await bomba_effetto_esplosione(update, context)
+    elif query.data == "btn_menu":
+        await start(update, context)
+
+def main():
+    # Avvia il server web su un thread separato per soddisfare Render
+    server_thread = threading.Thread(target=run_web_server, daemon=True)
+    server_thread.start()
+
+    # Avvia l'applicazione Telegram
+    application = ApplicationBuilder().token(TOKEN).build()
+
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button_handler))
+
+    logging.info("Bot avviato con successo e server web attivo!")
+    application.run_polling()
+
+if __name__ == '__main__':
+    main()
