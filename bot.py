@@ -153,38 +153,4 @@ async def genera_testo_schedina(tipo_sicurezza):
                     f"📌 Esito: {esito_str}\n"
                 )
                 count += 1
-            if count > 0:
-                matches_found = True
-    except Exception as e:
-        logging.error(f"Errore API: {e}")
-
-    if not matches_found:
-        if tipo_sicurezza == "100":
-            partite_list = [
-                "🏆 *Torneo:* Serie A (Italia)\n⚽ **Inter vs Lecce**\n🎯 **Giocata:** `1X` | 📊 Quota: `1.20` | 📌 Esito: ⏳ In attesa\n",
-                "🏆 *Torneo:* Premier League (Inghilterra)\n⚽ **Manchester City vs Southampton**\n🎯 **Giocata:** `Over 1.5` | 📊 Quota: `1.28` | 📌 Esito: ⏳ In attesa\n"
-            ]
-            quota_totale = 1.54
-        elif tipo_sicurezza == "70":
-            partite_list = [
-                "🏆 *Torneo:* La Liga (Spagna)\n⚽ **Real Madrid vs Villarreal**\n🎯 **Giocata:** `Gol (Entrambe Segnano)` | 📊 Quota: `1.70` | 📌 Esito: ⏳ In attesa\n",
-                "🏆 *Torneo:* Bundesliga (Germania)\n⚽ **Bayern Monaco vs Dortmund**\n🎯 **Giocata:** `Over 2.5` | 📊 Quota: `1.65` | 📌 Esito: ⏳ In attesa\n"
-            ]
-            quota_totale = 2.80
-        else:
-            partite_list = [
-                "🏆 *Torneo:* Champions League\n⚽ **PSG vs Real Madrid**\n🎯 **Giocata:** `1 + Over 2.5` | 📊 Quota: `2.60` | 📌 Esito: ⏳ In attesa\n",
-                "🏆 *Torneo:* Premier League\n⚽ **Arsenal vs Liverpool**\n🎯 **Giocata:** `Gol + Over 2.5` | 📊 Quota: `2.50` | 📌 Esito: ⏳ In attesa\n"
-            ]
-            quota_totale = 6.50
-
-    quota_totale = round(quota_totale, 2)
-    vincita_totale = round(puntata_consigliata * quota_totale, 2)
-
-    for p in partite_list:
-        schedina_text += p + "\n"
-
-    schedina_text += "━━━━━━━━━━━━━━━━━━━\n"
-    schedina_text += f"📊 **QUOTA TOTALE:** `{quota_totale}`\n"
-    schedina_text += f"📈 **Sicurezza / Probabilità:** `{prob_str}`\n"
-    schedina_text +=
+            
