@@ -15,7 +15,7 @@ logging.basicConfig(
 )
 
 # CREDENZIALI CONFIGURATE
-TOKEN = "8736023738:AAGfnjI9MURTUKNqbG80Pe4_aah4_IyPfpk"
+TOKEN = "9109962875:AAEfQyasxkN8Ddqm8I0PEmD3SwwgMBMkw3Y"
 FOOTBALL_API_KEY = "be001fd3625a4f84b61b28e26ba101b2"
 
 # 1. Server web fittizio per Render (Piano Free)
