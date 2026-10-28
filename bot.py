@@ -3,7 +3,6 @@ import logging
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 from datetime import datetime, time
-import pytz
 import asyncio
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -223,13 +222,13 @@ def genera_testo_bomba():
     )
     return testo
 
-# Gestione controllo orario ore 16:00 per la Bomba
+# Gestione controllo orario ore 16:00 per la Bomba (Senza dipendenze esterne)
 async def gestisci_bomba_orario(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    tz_italy = pytz.timezone('Europe/Rome')
-    ora_attuale = datetime.now(tz_italy).time()
+    # Prende l'ora locale del server (ora italiana su Render)
+    ora_attuale = datetime.now().time()
     orario_sblocco = time(16, 0, 0) # Ore 16:00:00
 
     keyboard_torna = [[InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]]
@@ -244,75 +243,4 @@ async def gestisci_bomba_orario(update: Update, context: ContextTypes.DEFAULT_TY
             reply_markup=reply_markup_torna
         )
     else:
-        await query.message.edit_text("💣 *Innesco Schedina Bomba VIP in corso...*\n\n⏱️ `3...`", parse_mode="Markdown")
-        await asyncio.sleep(1)
-        await query.message.edit_text("💣 *Innesco Schedina Bomba VIP in corso...*\n\n⏱️ `2...`", parse_mode="Markdown")
-        await asyncio.sleep(1)
-        await query.message.edit_text("💣 *Innesco Schedina Bomba VIP in corso...*\n\n⏱️ `1...`", parse_mode="Markdown")
-        await asyncio.sleep(1)
-        
-        testo_bomba = genera_testo_bomba()
-        keyboard_bomba = [
-            [InlineKeyboardButton("🔄 Aggiorna Bomba", callback_data="btn_bomba_check")],
-            [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
-        ]
-        reply_markup_bomba = InlineKeyboardMarkup(keyboard_bomba)
-        await query.message.edit_text(f"💥 **KABOOM! BOMBA SBLOCCATA!** 💥\n\n{testo_bomba}", parse_mode="Markdown", reply_markup=reply_markup_bomba)
-
-# Visualizzatori delle Schedine standard
-async def mostra_100(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    testo = await genera_testo_schedina("100")
-    keyboard = [
-        [InlineKeyboardButton("🔄 Aggiorna", callback_data="btn_100")],
-        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
-
-async def mostra_70(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    testo = await genera_testo_schedina("70")
-    keyboard = [
-        [InlineKeyboardButton("🔄 Aggiorna", callback_data="btn_70")],
-        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
-
-async def mostra_50(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    testo = await genera_testo_schedina("50")
-    keyboard = [
-        [InlineKeyboardButton("🔄 Aggiorna", callback_data="btn_50")],
-        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
-
-# Gestore dei Click dei Bottoni
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    
-    if query.data == "btn_100":
-        await mostra_100(update, context)
-    elif query.data == "btn_70":
-        await mostra_70(update, context)
-    elif query.data == "btn_50":
-        await mostra_50(update, context)
-    elif query.data == "btn_bomba_check":
-        await gestisci_bomba_orario(update, context)
-    elif query.data == "btn_menu":
-        await start(update, context)
-
-def main():
-    server_thread = threading.Thread(target=run_web_server, daemon=True)
-    server_thread.start()
-
-    application = ApplicationBuilder().token(TOKEN).build()
-
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button_handler))
-
-    logging.info("Bot avviato con successo!")
-    application.run_polling()
-
-if __name__ == '__main__':
-    main()
+        await query.message.edit_text("💣 *In
