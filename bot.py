@@ -34,12 +34,12 @@ def run_web_server():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         "🤖 **BENVENUTO SU KING PRONOSTICI** ⚽\n\n"
-        "Usa i pulsanti sottostanti per consultare la schedina mista (Italia ed Estero) completa di "
-        "quota totale, puntata consigliata, probabilità e riscontro in tempo reale!"
+        "Usa i pulsanti sottostanti per consultare la schedina estesa (Italia & Estero) ad alto profitto, "
+        "con quota totale, puntata, probabilità e riscontro in tempo reale!"
     )
     
     keyboard = [
-        [InlineKeyboardButton("📊 Schedina Mista (Italia & Estero)", callback_data="btn_pronostici")],
+        [InlineKeyboardButton("📊 Schedina Estesa (Italia & Estero)", callback_data="btn_pronostici")],
         [InlineKeyboardButton("💣 Protocollo Schedina Bomba", callback_data="btn_bomba_avvio")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -49,7 +49,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif update.callback_query:
         await update.callback_query.message.edit_text(welcome_text, parse_mode="Markdown", reply_markup=reply_markup)
 
-# 3. Schedina del Giorno con Partite Italiane e Straniere Miste
+# 3. Schedina del Giorno Estesa (Sfrutta al massimo l'API per più partite)
 async def genera_testo_pronostici():
     oggi = datetime.now().strftime('%Y-%m-%d')
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
@@ -58,7 +58,7 @@ async def genera_testo_pronostici():
     headers = {"X-Auth-Token": FOOTBALL_API_KEY}
     
     matches_found = False
-    schedina_text = f"🔥 **SCHEDINA MISTA (ITALIA & ESTERO) ({oggi_ita})** 🔥\n\n"
+    schedina_text = f"🔥 **SCHEDINA ESTESA MULTI-LEAGUE ({oggi_ita})** 🔥\n\n"
     
     quota_totale = 1.0
     partite_list = []
@@ -70,15 +70,15 @@ async def genera_testo_pronostici():
         
         if matches:
             count = 0
-            # Prende fino a 4 partite prendendo sia campionati italiani che esteri globali
-            for match in matches[:4]:
+            # Prende fino a 8 partite per un profitto alto con rischio controllato (multipla ricca)
+            for match in matches[:8]:
                 home = match.get('homeTeam', {}).get('name', 'Squadra A')
                 away = match.get('awayTeam', {}).get('name', 'Squadra B')
                 competition = match.get('competition', {}).get('name', 'Campionato')
                 status = match.get('status', 'SCHEDULED')
                 
                 pronostico = "1X o Over 1.5"
-                quota = 1.35
+                quota = 1.32  # Quota singola sicura ma remunerativa in multipla
                 quota_totale *= quota
                 
                 esito_str = "⏳ In attesa"
@@ -117,27 +117,28 @@ async def genera_testo_pronostici():
         logging.error(f"Errore API: {e}")
 
     if not matches_found:
-        quota_totale = 1.30 * 1.35 * 1.40
-        partite_list.append(
-            "🏆 *Torneo:* Serie A (Italia)\n"
-            "⚽ **Inter vs Juventus**\n"
-            "🔹 Pronostico: `1X` | Quota: `1.30` | 📌 Esito: ⏳ In attesa\n"
-        )
-        partite_list.append(
-            "🏆 *Torneo:* Premier League (Inghilterra)\n"
-            "⚽ **Arsenal vs Chelsea**\n"
-            "🔹 Pronostico: `Over 1.5` | Quota: `1.35` | 📌 Esito: ⏳ In attesa\n"
-        )
-        partite_list.append(
-            "🏆 *Torneo:* La Liga (Spagna)\n"
-            "⚽ **Real Madrid vs Barcellona**\n"
-            "🔹 Pronostico: `1X` | Quota: `1.40` | 📌 Esito: ⏳ In attesa\n"
-        )
+        # Fallback simulato esteso se oggi l'API non ha match
+        quota_totale = 1.30 ** 6  # Simulazione di 6 partite
+        simulated_matches = [
+            ("Serie A (Italia)", "Inter vs Milan", "1X", 1.30),
+            ("Premier League (Inghilterra)", "Arsenal vs Chelsea", "Over 1.5", 1.35),
+            ("La Liga (Spagna)", "Real Madrid vs Barcellona", "1X", 1.32),
+            ("Bundesliga (Germania)", "Bayern vs Dortmund", "Over 1.5", 1.28),
+            ("Ligue 1 (Francia)", "PSG vs Monaco", "1X", 1.30),
+            ("Champions League", "Liverpool vs Real Madrid", "Over 1.5", 1.35)
+        ]
+        for comp, match_str, pron, q in simulated_matches:
+            partite_list.append(
+                f"🏆 *Torneo:* {comp}\n"
+                f"⚽ **{match_str}**\n"
+                f"🔹 Pronostico: `{pron}` | Quota: `{q}`\n"
+                f"📌 Esito: ⏳ In attesa\n"
+            )
 
     quota_totale = round(quota_totale, 2)
-    puntata_consigliata = 10
+    puntata_consigliata = 10  # 10€ di puntata
     vincita_totale = round(puntata_consigliata * quota_totale, 2)
-    probabilita_schedina = "9/10 (Altissima affidabilità)"
+    probabilita_schedina = "8.5/10 (Alto profitto / Rischio controllato)"
 
     for p in partite_list:
         schedina_text += p + "\n"
@@ -152,23 +153,25 @@ async def genera_testo_pronostici():
     
     return schedina_text
 
-# 4. Schedina Bomba Mista (Italia & Estero)
+# 4. Schedina Bomba Estesa ad Alto Rendimento
 def genera_testo_bomba():
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
-    quota_bomba = 18.50
+    quota_bomba = 24.50
     puntata_bomba = 5
     vincita_bomba = round(puntata_bomba * quota_bomba, 2)
-    probabilita_bomba = "4/10 (Rischio Alto / Tentativo VIP)"
+    probabilita_bomba = "4/10 (Rischio Alto / Super Bomber)"
     
     testo = (
-        f"💣 **SCHEDINA BOMBA MISTA ({oggi_ita})** 💣\n\n"
-        "⚽ *Combinata ad altissimo rendimento (Italia & Estero)*\n\n"
-        "1️⃣ **AC Milan vs Napoli** (Serie A - Italia)\n"
+        f"💣 **SCHEDINA BOMBA MULTI-LEAGUE ({oggi_ita})** 💣\n\n"
+        "⚽ *Combinata d'élite ad altissimo profitto (Italia & Estero)*\n\n"
+        "1️⃣ **Juventus vs Napoli** (Serie A - Italia)\n"
         "   🔹 Cosa giocare: `1 + Over 1.5` (Quota: `2.40`)\n\n"
-        "2️⃣ **Manchester City vs Real Madrid** (Champions League)\n"
-        "   🔹 Cosa giocare: `1 + Over 2.5` (Quota: `2.50`)\n\n"
-        "3️⃣ **Bayern Monaco vs Borussia Dortmund** (Bundesliga - Germania)\n"
-        "   🔹 Cosa giocare: `Goal + Over 2.5` (Quota: `2.45`)\n\n"
+        "2️⃣ **Manchester City vs Arsenal** (Premier League - Inghilterra)\n"
+        "   🔹 Cosa giocare: `Goal + Over 2.5` (Quota: `2.50`)\n\n"
+        "3️⃣ **Atletico Madrid vs Barcellona** (La Liga - Spagna)\n"
+        "   🔹 Cosa giocare: `X2 + Goal` (Quota: `2.45`)\n\n"
+        "4️⃣ **Borussia Dortmund vs RB Leipzig** (Bundesliga - Germania)\n"
+        "   🔹 Cosa giocare: `1 & Over 2.5` (Quota: `2.60`)\n\n"
         "━━━━━━━━━━━━━━━━━━━\n"
         f"📊 **QUOTA TOTALE BOMBA:** `{quota_bomba}`\n"
         f"📈 **Probabilità di vincita:** `{probabilita_bomba}`\n"
@@ -183,7 +186,7 @@ def genera_testo_bomba():
 async def cmd_pronostici(update: Update, context: ContextTypes.DEFAULT_TYPE):
     testo = await genera_testo_pronostici()
     keyboard = [
-        [InlineKeyboardButton("🔄 Aggiorna Partite Miste", callback_data="btn_pronostici")],
+        [InlineKeyboardButton("🔄 Aggiorna Partite Estese", callback_data="btn_pronostici")],
         [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -214,7 +217,7 @@ async def bomba_effetto_esplosione(update: Update, context: ContextTypes.DEFAULT
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.message.edit_text(f"💥 **KABOOM! ECCO LA BOMBA MISTA!** 💥\n\n{testo_bomba}", parse_mode="Markdown", reply_markup=reply_markup)
+    await query.message.edit_text(f"💥 **KABOOM! ECCO LA BOMBA ESTESA!** 💥\n\n{testo_bomba}", parse_mode="Markdown", reply_markup=reply_markup)
 
 async def cmd_bomba_testuale(update: Update, context: ContextTypes.DEFAULT_TYPE):
     testo_bomba = genera_testo_bomba()
@@ -222,7 +225,7 @@ async def cmd_bomba_testuale(update: Update, context: ContextTypes.DEFAULT_TYPE)
         [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(f"💥 **SCHEDINA BOMBA MISTA ATTIVA** 💥\n\n{testo_bomba}", parse_mode="Markdown", reply_markup=reply_markup)
+    await update.message.reply_text(f"💥 **SCHEDINA BOMBA ESTESA ATTIVA** 💥\n\n{testo_bomba}", parse_mode="Markdown", reply_markup=reply_markup)
 
 # Gestore dei Click dei Bottoni
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -249,7 +252,7 @@ def main():
     # Gestore Bottoni Interattivi
     application.add_handler(CallbackQueryHandler(button_handler))
 
-    logging.info("Bot misto Italia & Estero avviato con successo!")
+    logging.info("Bot esteso ad alto profitto avviato con successo!")
     application.run_polling()
 
 if __name__ == '__main__':
