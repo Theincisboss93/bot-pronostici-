@@ -226,9 +226,6 @@ async def genera_testo_bomba():
     oggi = datetime.now().strftime('%Y-%m-%d')
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
     
-    url = f"https://api.football-data.org/v4/matches?date={oggi}"
-    
-    partite_bomba_list = []
     quota_bomba = 24.50
     puntata_bomba = 5
     
@@ -320,4 +317,127 @@ def background_live_notifier():
         while True:
             await asyncio.sleep(45)
             global USER_CHAT_ID, BOT_APPLICATION
-            if USER_CHAT_ID
+            if USER_CHAT_ID and BOT_APPLICATION:
+                oggi = datetime.now().strftime('%Y-%m-%d')
+                url = f"https://api.football-data.org/v4/matches?date={oggi}"
+                try:
+                    data = fetch_from_football_api(url)
+                    if data and "matches" in data:
+                        matches = data.get("matches", [])
+                        for match in matches:
+                            match_id = match.get('id')
+                            status = match.get('status', '')
+                            
+                            if status == 'IN_PLAY':
+                                home = match.get('homeTeam', {}).get('name', 'Casa')
+                                away = match.get('awayTeam', {}).get('name', 'Ospiti')
+                                competition = match.get('competition', {}).get('name', 'Campionato')
+                                score = match.get('score', {}).get('fullTime', {})
+                                hg = score.get('home', 0)
+                                ag = score.get('away', 0)
+                                
+                                match_key = f"{match_id}_{hg}_{ag}"
+                                if match_key not in notiziario_inviato:
+                                    notifica_text = (
+                                        f"🚨 NOTIFICA PUSH LIVE AUTOMATICA ({competition}) 🚨\n\n"
+                                        f"⚽ {home} {hg} - {ag} {away}\n"
+                                        f"🔥 CHI PUNTARE: Prossimo Gol / Assedio\n"
+                                        f"🎯 Cosa giocare: Over 0.5 Live\n"
+                                        f"📊 Quota Live: 1.95\n"
+                                        f"💰 Puntata consigliata: 12€\n\n"
+                                        f"Piazzala subito prima del cambio quota!"
+                                    )
+                                    await BOT_APPLICATION.bot.send_message(chat_id=USER_CHAT_ID, text=notifica_text)
+                                    notiziario_inviato.add(match_key)
+                except Exception as e:
+                    logging.error(f"Errore nel worker di notifica push live: {e}")
+
+    loop.run_until_complete(worker())
+
+async def bomba_effetto_esplosione(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    await query.message.edit_text("💣 Innesco Schedina Bomba VIP in corso...\n\n3...")
+    await asyncio.sleep(0.5)
+    await query.message.edit_text("💣 Innesco Schedina Bomba VIP in corso...\n\n2...")
+    await asyncio.sleep(0.5)
+    await query.message.edit_text("💣 Innesco Schedina Bomba VIP in corso...\n\n1...")
+    await asyncio.sleep(0.5)
+    
+    testo_bomba = await genera_testo_bomba()
+    keyboard_bomba = [
+        [InlineKeyboardButton("Aggiorna Bomba", callback_data="btn_bomba_avvio")],
+        [InlineKeyboardButton("Torna al Menu Principale", callback_data="btn_menu")]
+    ]
+    reply_markup_bomba = InlineKeyboardMarkup(keyboard_bomba)
+    await query.message.edit_text(testo_bomba, reply_markup=reply_markup_bomba)
+
+async def mostra_100(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    testo = await genera_testo_schedina("100")
+    keyboard = [
+        [InlineKeyboardButton("Aggiorna", callback_data="btn_100")],
+        [InlineKeyboardButton("Torna al Menu Principale", callback_data="btn_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.callback_query.message.edit_text(testo, reply_markup=reply_markup)
+
+async def mostra_70(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    testo = await genera_testo_schedina("70")
+    keyboard = [
+        [InlineKeyboardButton("Aggiorna", callback_data="btn_70")],
+        [InlineKeyboardButton("Torna al Menu Principale", callback_data="btn_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.callback_query.message.edit_text(testo, reply_markup=reply_markup)
+
+async def mostra_50(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    testo = await genera_testo_schedina("50")
+    keyboard = [
+        [InlineKeyboardButton("Aggiorna", callback_data="btn_50")],
+        [InlineKeyboardButton("Torna al Menu Principale", callback_data="btn_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.callback_query.message.edit_text(testo, reply_markup=reply_markup)
+
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    
+    if query.data == "btn_100":
+        await mostra_100(update, context)
+    elif query.data == "btn_70":
+        await mostra_70(update, context)
+    elif query.data == "btn_50":
+        await mostra_50(update, context)
+    elif query.data == "btn_bomba_avvio":
+        await bomba_effetto_esplosione(update, context)
+    elif query.data == "btn_live_radar":
+        await mostra_live_radar(update, context)
+    elif query.data == "btn_menu":
+        await start(update, context)
+
+def main():
+    global BOT_APPLICATION
+    try:
+        server_thread = threading.Thread(target=run_web_server, daemon=True)
+        server_thread.start()
+
+        application = ApplicationBuilder().token(TOKEN).build()
+        BOT_APPLICATION = application
+
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CallbackQueryHandler(button_handler))
+
+        notifier_thread = threading.Thread(target=background_live_notifier, daemon=True)
+        notifier_thread.start()
+
+        logging.info("Bot avviato con successo in modalità pulita e stabile!")
+        application.run_polling(drop_pending_updates=True)
+        
+    except Exception as e:
+        logging.critical(f"Errore critico durante l'avvio del bot: {e}")
+        traceback.print_exc()
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()
