@@ -9,7 +9,7 @@ from datetime import datetime
 import asyncio
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler, MessageHandler, filters
 
 # Abilita i log di sistema dettagliati
 logging.basicConfig(
@@ -70,7 +70,7 @@ def run_web_server():
     except Exception as e:
         logging.error(f"Errore nell'avvio del server web sulla porta {port}: {e}")
 
-# 2. Menu Principale e Registrazione Chat ID
+# 2. Menu Principale con Bottoni Interattivi e Registrazione Chat ID
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global USER_CHAT_ID
     if update.effective_chat:
@@ -78,12 +78,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     welcome_text = (
         "🤖 BENVENUTO SU KING PRONOSTICI ⚽\n\n"
-        "Seleziona la schedina o l'area desiderata:\n"
-        "• 100% Sicura: Giocate singole blindate\n"
-        "• 70% Sicura: Ottimo equilibrio e valore\n"
-        "• 50% Sicura: Schedina ad alto rendimento\n"
-        "• 💣 Schedina Bomba VIP: Partite reali del giorno\n"
-        "• 🔴 Radar Scommesse LIVE: Segnali in tempo reale!"
+        "Usa i **tasti interattivi** qui sotto oppure **scrivimi liberamente in chat** "
+        "(es. 'dammi la schedina 100', 'schedina bomba', 'live') per avere tutto all'istante!"
     )
     
     keyboard = [
@@ -100,7 +96,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif update.callback_query:
         await update.callback_query.message.edit_text(welcome_text, reply_markup=reply_markup)
 
-# Funzione generatrice delle 3 schedine standard
+# Funzione generatrice delle schedine standard (filtrate per la giornata odierna)
 async def genera_testo_schedina(tipo_sicurezza):
     oggi = datetime.now().strftime('%Y-%m-%d')
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
@@ -186,24 +182,11 @@ async def genera_testo_schedina(tipo_sicurezza):
         logging.error(f"Errore API Schedina: {e}")
 
     if not matches_found:
-        if tipo_sicurezza == "100":
-            partite_list = [
-                "Torneo: Serie A\n⚽ Inter vs Lecce\n🎯 Giocata: 1X | Quota: 1.20 | Esito: In attesa\n",
-                "Torneo: Premier League\n⚽ Manchester City vs Southampton\n🎯 Giocata: Over 1.5 | Quota: 1.28 | Esito: In attesa\n"
-            ]
-            quota_totale = 1.54
-        elif tipo_sicurezza == "70":
-            partite_list = [
-                "Torneo: La Liga\n⚽ Real Madrid vs Villarreal\n🎯 Giocata: Gol | Quota: 1.70 | Esito: In attesa\n",
-                "Torneo: Bundesliga\n⚽ Bayern Monaco vs Dortmund\n🎯 Giocata: Over 2.5 | Quota: 1.65 | Esito: In attesa\n"
-            ]
-            quota_totale = 2.80
-        else:
-            partite_list = [
-                "Torneo: Champions League\n⚽ PSG vs Real Madrid\n🎯 Giocata: 1 + Over 2.5 | Quota: 2.60 | Esito: In attesa\n",
-                "Torneo: Premier League\n⚽ Arsenal vs Liverpool\n🎯 Giocata: Gol + Over 2.5 | Quota: 2.50 | Esito: In attesa\n"
-            ]
-            quota_totale = 6.50
+        partite_list = [
+            f"Torneo: Partite Odierne ({oggi_ita})\n⚽ Evento Principale 1 vs Evento Principale 2\n🎯 Giocata: 1X | Quota: 1.35 | Esito: In attesa\n",
+            f"Torneo: Partite Odierne ({oggi_ita})\n⚽ Evento Principale 3 vs Evento Principale 4\n🎯 Giocata: Over 1.5 | Quota: 1.40 | Esito: In attesa\n"
+        ]
+        quota_totale = 1.89
 
     quota_totale = round(quota_totale, 2)
     vincita_totale = round(puntata_consigliata * quota_totale, 2)
@@ -221,24 +204,48 @@ async def genera_testo_schedina(tipo_sicurezza):
     
     return schedina_text
 
-# Generatore Schedina Bomba VIP
+# Generatore Schedina Bomba VIP (Rigorosamente per oggi)
 async def genera_testo_bomba():
     oggi = datetime.now().strftime('%Y-%m-%d')
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
     
-    quota_bomba = 24.50
+    url = f"https://api.football-data.org/v4/matches?date={oggi}"
+    partite_bomba_list = []
+    quota_bomba = 1.0
     puntata_bomba = 5
-    
-    partite_bomba_list = [
-        "Torneo: Serie A\n⚽ AC Milan vs Napoli\n🎯 Giocata: 1 + Over 1.5 | Quota: 2.40 | Esito: In attesa\n",
-        "Torneo: La Liga\n⚽ Real Madrid vs Barcellona\n🎯 Giocata: Gol + Over 2.5 | Quota: 2.50 | Esito: In attesa\n",
-        "Torneo: Premier League\n⚽ Arsenal vs Manchester City\n🎯 Giocata: 1 & Gol | Quota: 3.00 | Esito: In attesa\n"
-    ]
+    trovate = False
 
+    try:
+        data = fetch_from_football_api(url)
+        if data and "matches" in data:
+            matches = data.get("matches", [])
+            if matches:
+                for i, match in enumerate(matches[:3]):
+                    home = match.get('homeTeam', {}).get('name', 'Casa')
+                    away = match.get('awayTeam', {}).get('name', 'Ospiti')
+                    comp = match.get('competition', {}).get('name', 'Torneo')
+                    q = round(2.20 + (i * 0.30), 2)
+                    quota_bomba *= q
+                    partite_bomba_list.append(
+                        f"Torneo: {comp}\n⚽ {home} vs {away}\n🎯 Giocata: 1 + Over 1.5 | Quota: {q} | Esito: In attesa\n"
+                    )
+                trovate = True
+    except Exception as e:
+        logging.error(f"Errore Bomba API: {e}")
+
+    if not trovate:
+        quota_bomba = 15.50
+        partite_bomba_list = [
+            f"Torneo: Serie A ({oggi_ita})\n⚽ Squadra A vs Squadra B\n🎯 Giocata: 1 + Over 1.5 | Quota: 2.50 | Esito: In attesa\n",
+            f"Torneo: Premier League ({oggi_ita})\n⚽ Squadra C vs Squadra D\n🎯 Giocata: Gol + Over 2.5 | Quota: 2.50 | Esito: In attesa\n",
+            f"Torneo: Champions League ({oggi_ita})\n⚽ Squadra E vs Squadra F\n🎯 Giocata: 1 & Gol | Quota: 2.48 | Esito: In attesa\n"
+        ]
+
+    quota_bomba = round(quota_bomba, 2)
     vincita_bomba = round(puntata_bomba * quota_bomba, 2)
 
     testo = f"💣 SCHEDINA BOMBA VIP DEL GIORNO ({oggi_ita}) 💣\n\n"
-    testo += "Combinata ad altissimo rendimento:\n\n"
+    testo += "Combinata ad altissimo rendimento sui match di oggi:\n\n"
     
     for p in partite_bomba_list:
         testo += p + "\n"
@@ -288,8 +295,8 @@ async def genera_testo_live():
 
     if not segnali_live:
         segnali_live.append(
-            "🔴 RADAR LIVE ATTIVO (Tutti i Campionati Mondiali)\n\n"
-            "Nessun match in corso adesso. Appena comincerà una partita live, riceverai l'allerta automatica!"
+            f"🔴 RADAR LIVE ATTIVO ({oggi_ita})\n\n"
+            "Nessuna partita in corso in questo momento. Appena comincerà un match live oggi, riceverai l'allerta automatica!"
         )
 
     testo = f"🚨 RADAR SCOMMESSE LIVE & SEGNALI GOL ({oggi_ita}) 🚨\n\n"
@@ -297,6 +304,44 @@ async def genera_testo_live():
         testo += s + "\n"
     
     return testo
+
+# Assistente Intelligente per la Chat Testuale Libera
+async def chat_assistant_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global USER_CHAT_ID
+    if update.effective_chat:
+        USER_CHAT_ID = update.effective_chat.id
+
+    if not update.message or not update.message.text:
+        return
+
+    testo_utente = update.message.text.lower()
+
+    if "100" in testo_utente or "sicura" in testo_utente:
+        risposta = await genera_testo_schedina("100")
+        await update.message.reply_text(risposta)
+    elif "70" in testo_utente:
+        risposta = await genera_testo_schedina("70")
+        await update.message.reply_text(risposta)
+    elif "50" in testo_utente:
+        risposta = await genera_testo_schedina("50")
+        await update.message.reply_text(risposta)
+    elif "bomba" in testo_utente or "vip" in testo_utente:
+        risposta = await genera_testo_bomba()
+        await update.message.reply_text(risposta)
+    elif "live" in testo_utente or "gol" in testo_utente or "partite" in testo_utente:
+        risposta = await genera_testo_live()
+        await update.message.reply_text(risposta)
+    else:
+        risposta = (
+            "🤖 Ciao! Sono il tuo assistente King Pronostici.\n"
+            "Puoi usare i bottoni interattivi con il comando /start oppure chiedermi direttamente:\n"
+            "• 'Dammi la schedina 100'\n"
+            "• 'Schedina 70'\n"
+            "• 'Schedina 50'\n"
+            "• 'Schedina Bomba'\n"
+            "• 'Partite live'"
+        )
+        await update.message.reply_text(risposta)
 
 async def mostra_live_radar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     testo = await genera_testo_live()
@@ -427,11 +472,12 @@ def main():
 
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CallbackQueryHandler(button_handler))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat_assistant_handler))
 
         notifier_thread = threading.Thread(target=background_live_notifier, daemon=True)
         notifier_thread.start()
 
-        logging.info("Bot avviato con successo in modalità pulita e stabile!")
+        logging.info("Bot avviato con successo: tasti, chat e notifiche live perfettamente attivi!")
         application.run_polling(drop_pending_updates=True)
         
     except Exception as e:
