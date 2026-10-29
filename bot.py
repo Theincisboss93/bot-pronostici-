@@ -14,14 +14,13 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# CREDENZIALI E MULTI-API KEY CONFIGURATE
+# CREDENZIALI E API KEYS CONFIGURATE
 TOKEN = "9109962875:AAEfQyasxkN8Ddqm8I0PEmD3SwwgMBMkw3Y"
 FOOTBALL_API_KEYS = [
     "be001fd3625a4f84b61b28e26ba101b2",
     "A7IauxgMoOQxH4XXRH8Eyflf16KC5OzoJ4tGb5ORCTMwqDg5VHpDaKadrl0O"
 ]
 
-# Funzione per richiedere i dati passando automaticamente da una chiave all'altra in caso di esaurimento quota
 def fetch_from_football_api(endpoint_url):
     for api_key in FOOTBALL_API_KEYS:
         headers = {"X-Auth-Token": api_key}
@@ -30,22 +29,20 @@ def fetch_from_football_api(endpoint_url):
             if response.status_code == 200:
                 return response.json()
             elif response.status_code == 429:
-                logging.warning("Quota API esaurita per una chiave, passaggio alla successiva...")
                 continue
-        except Exception as e:
-            logging.error(f"Errore di connessione API con chiave: {e}")
+        except Exception:
             continue
     return None
 
-# 1. Server web fittizio per Render (Mantiene attiva l'istanza)
+# 1. Server web fittizio per Render (Piano Free)
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"Bot is online and running!")
+        self.wfile.write(b"Bot is online!")
         
     def log_message(self, format, *args):
-        return # Evita di intasare i log
+        return
 
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
@@ -173,7 +170,7 @@ async def genera_testo_schedina(tipo_sicurezza):
                 if count > 0:
                     matches_found = True
     except Exception as e:
-        logging.error(f"Errore elaborazione Schedina: {e}")
+        logging.error(f"Errore: {e}")
 
     if not matches_found:
         if tipo_sicurezza == "100":
@@ -264,7 +261,7 @@ async def genera_testo_bomba():
                     )
                 bomba_trovata = True
     except Exception as e:
-        logging.error(f"Errore elaborazione Bomba: {e}")
+        logging.error(f"Errore: {e}")
 
     if not bomba_trovata:
         quota_bomba = 24.50
@@ -293,7 +290,6 @@ async def genera_testo_bomba():
     
     return testo
 
-# Effetto animato rapido e apertura immediata della Bomba
 async def bomba_effetto_esplosione(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -311,62 +307,4 @@ async def bomba_effetto_esplosione(update: Update, context: ContextTypes.DEFAULT
         [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
     ]
     reply_markup_bomba = InlineKeyboardMarkup(keyboard_bomba)
-    await query.message.edit_text(testo_bomba, parse_mode="Markdown", reply_markup=reply_markup_bomba)
-
-# Visualizzatori delle Schedine standard
-async def mostra_100(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    testo = await genera_testo_schedina("100")
-    keyboard = [
-        [InlineKeyboardButton("🔄 Aggiorna", callback_data="btn_100")],
-        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
-
-async def mostra_70(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    testo = await genera_testo_schedina("70")
-    keyboard = [
-        [InlineKeyboardButton("🔄 Aggiorna", callback_data="btn_70")],
-        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
-
-async def mostra_50(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    testo = await genera_testo_schedina("50")
-    keyboard = [
-        [InlineKeyboardButton("🔄 Aggiorna", callback_data="btn_50")],
-        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
-
-# Gestore dei Click dei Bottoni
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    
-    if query.data == "btn_100":
-        await mostra_100(update, context)
-    elif query.data == "btn_70":
-        await mostra_70(update, context)
-    elif query.data == "btn_50":
-        await mostra_50(update, context)
-    elif query.data == "btn_bomba_avvio":
-        await bomba_effetto_esplosione(update, context)
-    elif query.data == "btn_menu":
-        await start(update, context)
-
-def main():
-    server_thread = threading.Thread(target=run_web_server, daemon=True)
-    server_thread.start()
-
-    application = ApplicationBuilder().token(TOKEN).build()
-
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button_handler))
-
-    logging.info("Bot avviato con successo e Multi-API Key attiva!")
-    application.run_polling()
-
-if __name__ == 'main__':
-    main()
+    await query.message.edit_text(testo_bomba, parse_mode="Markdown
