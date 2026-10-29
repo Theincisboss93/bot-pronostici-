@@ -14,9 +14,28 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# TOKEN CONFIGURATO
+# CREDENZIALI E MULTI-API KEY CONFIGURATE
 TOKEN = "9109962875:AAEfQyasxkN8Ddqm8I0PEmD3SwwgMBMkw3Y"
-FOOTBALL_API_KEY = "be001fd3625a4f84b61b28e26ba101b2"
+FOOTBALL_API_KEYS = [
+    "be001fd3625a4f84b61b28e26ba101b2",
+    "A7IauxgMoOQxH4XXRH8Eyflf16KC5OzoJ4tGb5ORCTMwqDg5VHpDaKadrl0O"
+]
+
+# Funzione per richiedere i dati passando automaticamente da una chiave all'altra in caso di esaurimento quota
+def fetch_from_football_api(endpoint_url):
+    for api_key in FOOTBALL_API_KEYS:
+        headers = {"X-Auth-Token": api_key}
+        try:
+            response = requests.get(endpoint_url, headers=headers, timeout=5)
+            if response.status_code == 200:
+                return response.json()
+            elif response.status_code == 429:
+                logging.warning("Quota API esaurita per una chiave, passaggio alla successiva...")
+                continue
+        except Exception as e:
+            logging.error(f"Errore di connessione API con chiave: {e}")
+            continue
+    return None
 
 # 1. Server web fittizio per Render (Mantiene attiva l'istanza)
 class SimpleHandler(BaseHTTPRequestHandler):
@@ -26,7 +45,7 @@ class SimpleHandler(BaseHTTPRequestHandler):
         self.wfile.write(b"Bot is online and running!")
         
     def log_message(self, format, *args):
-        return # Evita di intasare i log con le richieste di ping HTTP
+        return # Evita di intasare i log
 
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
@@ -63,7 +82,6 @@ async def genera_testo_schedina(tipo_sicurezza):
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
     
     url = f"https://api.football-data.org/v4/matches?date={oggi}"
-    headers = {"X-Auth-Token": FOOTBALL_API_KEY}
     
     matches_found = False
     partite_list = []
@@ -92,71 +110,70 @@ async def genera_testo_schedina(tipo_sicurezza):
     schedina_text = f"{titolo_schedina}\n\n"
     
     try:
-        response = requests.get(url, headers=headers, timeout=5)
-        data = response.json()
-        matches = data.get("matches", [])
-        
-        if matches:
-            count = 0
-            for i, match in enumerate(matches[:max_partite]):
-                home = match.get('homeTeam', {}).get('name', 'Squadra A')
-                away = match.get('awayTeam', {}).get('name', 'Squadra B')
-                competition = match.get('competition', {}).get('name', 'Campionato')
-                status = match.get('status', 'SCHEDULED')
-                
-                if tipo_sicurezza == "100":
-                    giocata = giocate_possibili_100[i % len(giocate_possibili_100)]
-                    q = round(1.20 + (i * 0.05), 2)
-                elif tipo_sicurezza == "70":
-                    giocata = giocate_possibili_70[i % len(giocate_possibili_70)]
-                    q = round(1.55 + (i * 0.10), 2)
-                else:
-                    giocata = giocate_possibili_50[i % len(giocate_possibili_50)]
-                    q = round(2.30 + (i * 0.15), 2)
+        data = fetch_from_football_api(url)
+        if data and "matches" in data:
+            matches = data.get("matches", [])
+            if matches:
+                count = 0
+                for i, match in enumerate(matches[:max_partite]):
+                    home = match.get('homeTeam', {}).get('name', 'Squadra A')
+                    away = match.get('awayTeam', {}).get('name', 'Squadra B')
+                    competition = match.get('competition', {}).get('name', 'Campionato')
+                    status = match.get('status', 'SCHEDULED')
                     
-                quota_totale *= q
-                esito_str = "⏳ In attesa"
-                
-                if status == 'FINISHED':
-                    score = match.get('score', {}).get('fullTime', {})
-                    home_goals = score.get('home', 0)
-                    away_goals = score.get('away', 0)
-                    tot_goals = home_goals + away_goals
-                    
-                    if giocata == "1X" and home_goals >= away_goals:
-                        esito_str = "✅ **VINTO!** 🎉"
-                    elif giocata == "Over 1.5" and tot_goals >= 2:
-                        esito_str = "✅ **VINTO!** 🎉"
-                    elif giocata == "Gol (Entrambe Segnano)" and home_goals > 0 and away_goals > 0:
-                        esito_str = "✅ **VINTO!** 🎉"
-                    elif giocata == "Over 2.5" and tot_goals >= 3:
-                        esito_str = "✅ **VINTO!** 🎉"
-                    elif giocata == "1" and home_goals > away_goals:
-                        esito_str = "✅ **VINTO!** 🎉"
+                    if tipo_sicurezza == "100":
+                        giocata = giocate_possibili_100[i % len(giocate_possibili_100)]
+                        q = round(1.20 + (i * 0.05), 2)
+                    elif tipo_sicurezza == "70":
+                        giocata = giocate_possibili_70[i % len(giocate_possibili_70)]
+                        q = round(1.55 + (i * 0.10), 2)
                     else:
-                        esito_str = "❌ **PERSO** 😢"
+                        giocata = giocate_possibili_50[i % len(giocate_possibili_50)]
+                        q = round(2.30 + (i * 0.15), 2)
                         
-                    match_title = f"⚽ **{home} {home_goals} - {away_goals} {away}**"
-                elif status in ['IN_PLAY', 'PAUSED']:
-                    score = match.get('score', {}).get('fullTime', {})
-                    hg = score.get('home', 0)
-                    ag = score.get('away', 0)
-                    esito_str = f"🔴 **LIVE ({hg} - {ag})**"
-                    match_title = f"⚽ **{home} vs {away}**"
-                else:
-                    match_title = f"⚽ **{home} vs {away}**"
+                    quota_totale *= q
+                    esito_str = "⏳ In attesa"
+                    
+                    if status == 'FINISHED':
+                        score = match.get('score', {}).get('fullTime', {})
+                        home_goals = score.get('home', 0)
+                        away_goals = score.get('away', 0)
+                        tot_goals = home_goals + away_goals
+                        
+                        if giocata == "1X" and home_goals >= away_goals:
+                            esito_str = "✅ **VINTO!** 🎉"
+                        elif giocata == "Over 1.5" and tot_goals >= 2:
+                            esito_str = "✅ **VINTO!** 🎉"
+                        elif giocata == "Gol (Entrambe Segnano)" and home_goals > 0 and away_goals > 0:
+                            esito_str = "✅ **VINTO!** 🎉"
+                        elif giocata == "Over 2.5" and tot_goals >= 3:
+                            esito_str = "✅ **VINTO!** 🎉"
+                        elif giocata == "1" and home_goals > away_goals:
+                            esito_str = "✅ **VINTO!** 🎉"
+                        else:
+                            esito_str = "❌ **PERSO** 😢"
+                            
+                        match_title = f"⚽ **{home} {home_goals} - {away_goals} {away}**"
+                    elif status in ['IN_PLAY', 'PAUSED']:
+                        score = match.get('score', {}).get('fullTime', {})
+                        hg = score.get('home', 0)
+                        ag = score.get('away', 0)
+                        esito_str = f"🔴 **LIVE ({hg} - {ag})**"
+                        match_title = f"⚽ **{home} vs {away}**"
+                    else:
+                        match_title = f"⚽ **{home} vs {away}**"
 
-                partite_list.append(
-                    f"🏆 *Torneo:* {competition}\n"
-                    f"{match_title}\n"
-                    f"🎯 **Giocata:** `{giocata}` | 📊 Quota: `{q}`\n"
-                    f"📌 Esito: {esito_str}\n"
-                )
-                count += 1
-            if count > 0:
-                matches_found = True
+                    partite_list.append(
+                        f"🏆 *Torneo:* {competition}\n"
+                        f"{match_title}\n"
+                        f"🎯 **Giocata:** `{giocata}` | 📊 Quota: `{q}`\n"
+                        f"📌 Esito: {esito_str}\n"
+                    )
+                    count += 1
+                if count > 0:
+                    matches_found = True
     except Exception as e:
-        logging.error(f"Errore API Schedina: {e}")
+        logging.error(f"Errore elaborazione Schedina: {e}")
 
     if not matches_found:
         if tipo_sicurezza == "100":
@@ -200,7 +217,6 @@ async def genera_testo_bomba():
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
     
     url = f"https://api.football-data.org/v4/matches?date={oggi}"
-    headers = {"X-Auth-Token": FOOTBALL_API_KEY}
     
     partite_bomba_list = []
     quota_bomba = 1.0
@@ -210,46 +226,45 @@ async def genera_testo_bomba():
     giocate_bomba = ["1 + Over 1.5", "Gol + Over 2.5", "2 + Over 1.5", "1 & Gol"]
 
     try:
-        response = requests.get(url, headers=headers, timeout=5)
-        data = response.json()
-        matches = data.get("matches", [])
-        
-        if matches and len(matches) >= 3:
-            for i, match in enumerate(matches[:4]):
-                home = match.get('homeTeam', {}).get('name', 'Squadra A')
-                away = match.get('awayTeam', {}).get('name', 'Squadra B')
-                competition = match.get('competition', {}).get('name', 'Campionato')
-                status = match.get('status', 'SCHEDULED')
-                
-                giocata = giocate_bomba[i % len(giocate_bomba)]
-                q = round(2.30 + (i * 0.35), 2)
-                quota_bomba *= q
-                
-                esito_str = "⏳ In attesa"
-                if status == 'FINISHED':
-                    score = match.get('score', {}).get('fullTime', {})
-                    hg = score.get('home', 0)
-                    ag = score.get('away', 0)
-                    esito_str = "✅ **VINTO!** 🎉" if (hg + ag) >= 2 else "❌ **PERSO** 😢"
-                    match_title = f"⚽ **{home} {hg} - {ag} {away}**"
-                elif status in ['IN_PLAY', 'PAUSED']:
-                    score = match.get('score', {}).get('fullTime', {})
-                    hg = score.get('home', 0)
-                    ag = score.get('away', 0)
-                    esito_str = f"🔴 **LIVE ({hg} - {ag})**"
-                    match_title = f"⚽ **{home} vs {away}**"
-                else:
-                    match_title = f"⚽ **{home} vs {away}**"
+        data = fetch_from_football_api(url)
+        if data and "matches" in data:
+            matches = data.get("matches", [])
+            if matches and len(matches) >= 3:
+                for i, match in enumerate(matches[:4]):
+                    home = match.get('homeTeam', {}).get('name', 'Squadra A')
+                    away = match.get('awayTeam', {}).get('name', 'Squadra B')
+                    competition = match.get('competition', {}).get('name', 'Campionato')
+                    status = match.get('status', 'SCHEDULED')
+                    
+                    giocata = giocate_bomba[i % len(giocate_bomba)]
+                    q = round(2.30 + (i * 0.35), 2)
+                    quota_bomba *= q
+                    
+                    esito_str = "⏳ In attesa"
+                    if status == 'FINISHED':
+                        score = match.get('score', {}).get('fullTime', {})
+                        hg = score.get('home', 0)
+                        ag = score.get('away', 0)
+                        esito_str = "✅ **VINTO!** 🎉" if (hg + ag) >= 2 else "❌ **PERSO** 😢"
+                        match_title = f"⚽ **{home} {hg} - {ag} {away}**"
+                    elif status in ['IN_PLAY', 'PAUSED']:
+                        score = match.get('score', {}).get('fullTime', {})
+                        hg = score.get('home', 0)
+                        ag = score.get('away', 0)
+                        esito_str = f"🔴 **LIVE ({hg} - {ag})**"
+                        match_title = f"⚽ **{home} vs {away}**"
+                    else:
+                        match_title = f"⚽ **{home} vs {away}**"
 
-                partite_bomba_list.append(
-                    f"🏆 *Torneo:* {competition}\n"
-                    f"{match_title}\n"
-                    f"🎯 **Giocata:** `{giocata}` | 📊 Quota: `{q}`\n"
-                    f"📌 Esito: {esito_str}\n"
-                )
-            bomba_trovata = True
+                    partite_bomba_list.append(
+                        f"🏆 *Torneo:* {competition}\n"
+                        f"{match_title}\n"
+                        f"🎯 **Giocata:** `{giocata}` | 📊 Quota: `{q}`\n"
+                        f"📌 Esito: {esito_str}\n"
+                    )
+                bomba_trovata = True
     except Exception as e:
-        logging.error(f"Errore API Bomba: {e}")
+        logging.error(f"Errore elaborazione Bomba: {e}")
 
     if not bomba_trovata:
         quota_bomba = 24.50
@@ -342,18 +357,16 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await start(update, context)
 
 def main():
-    # Avvia il server web su un thread separato per soddisfare Render
     server_thread = threading.Thread(target=run_web_server, daemon=True)
     server_thread.start()
 
-    # Avvia l'applicazione Telegram
     application = ApplicationBuilder().token(TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_handler))
 
-    logging.info("Bot avviato con successo e server web attivo!")
+    logging.info("Bot avviato con successo e Multi-API Key attiva!")
     application.run_polling()
 
-if __name__ == '__main__':
+if __name__ == 'main__':
     main()
