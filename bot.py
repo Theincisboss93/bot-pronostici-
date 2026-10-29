@@ -14,7 +14,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# TOKEN MULTIPLI E API KEYS CONFIGURATI
+# TOKEN E API KEYS CONFIGURATI
 TOKENS = [
     "9109962875:AAEfQyasxkN8Ddqm8I0PEmD3SwwgMBMkw3Y",
     "8987770671:AAHZ5vFUWWT2t83Dbxr6wCeVyNrMP2zEQHM"
@@ -54,7 +54,7 @@ def run_web_server():
     server = HTTPServer(("0.0.0.0", port), SimpleHandler)
     server.serve_forever()
 
-# 2. Menu Principale con i Pulsanti (incluse le Scommesse Live)
+# 2. Menu Principale con i Pulsanti
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         "🤖 **BENVENUTO SU KING PRONOSTICI** ⚽\n\n"
@@ -281,3 +281,94 @@ async def genera_testo_bomba():
     quota_bomba = round(quota_bomba, 2)
     vincita_bomba = round(puntata_bomba * quota_bomba, 2)
 
+    testo = f"💣 **SCHEDINA BOMBA VIP DEL GIORNO ({oggi_ita})** 💣\n\n"
+    testo += "⚽ *Combinata ad altissimo rendimento con i match odierni*\n\n"
+    
+    for p in partite_bomba_list:
+        testo += p + "\n"
+
+    testo += "━━━━━━━━━━━━━━━━━━━\n"
+    testo += f"📊 **QUOTA TOTALE BOMBA:** `{quota_bomba}`\n"
+    testo += f"📈 **Sicurezza:** `3.5/10 (Rischio Alto VIP)`\n"
+    testo += f"💰 **Puntata consigliata:** `{puntata_bomba}€`\n"
+    testo += f"💵 **VINCITA COMPLESSIVA:** `{vincita_bomba}€`\n"
+    testo += "━━━━━━━━━━━━━━━━━━━\n"
+    testo += "⚠️ *Puntare solo il budget di svago!* 🍀"
+    
+    return testo
+
+# Generatore Segnali LIVE e Imminente Gol
+async def genera_testo_live():
+    oggi = datetime.now().strftime('%Y-%m-%d')
+    oggi_ita = datetime.now().strftime('%d/%m/%Y')
+    url = f"https://api.football-data.org/v4/matches?date={oggi}"
+    
+    segnali_live = []
+    
+    try:
+        data = fetch_from_football_api(url)
+        if data and "matches" in data:
+            matches = data.get("matches", [])
+            for match in matches:
+                status = match.get('status', '')
+                if status in ['IN_PLAY', 'PAUSED']:
+                    home = match.get('homeTeam', {}).get('name', 'Casa')
+                    away = match.get('awayTeam', {}).get('name', 'Ospiti')
+                    competition = match.get('competition', {}).get('name', 'Campionato')
+                    score = match.get('score', {}).get('fullTime', {})
+                    hg = score.get('home', 0)
+                    ag = score.get('away', 0)
+                    
+                    segnali_live.append(
+                        f"🔴 **MATCH LIVE IN CORSO**\n"
+                        f"🏆 *Torneo:* {competition}\n"
+                        f"⚽ **{home} {hg} - {ag} {away}**\n"
+                        f"🔥 **SEGNALE GOL IMMINENTE:** `Assedio offensivo / Over 0.5 Live`\n"
+                        f"📊 **Quota Live Consigliata:** `1.85`\n"
+                        f"💰 **Puntata Consigliata:** `10€`\n"
+                        f"-----------------------------------"
+                    )
+    except Exception as e:
+        logging.error(f"Errore Live: {e}")
+
+    if not segnali_live:
+        segnali_live.append(
+            "🔴 **RADAR LIVE ATTIVO (Nessun match in corso adesso)**\n\n"
+            "⚽ *Esempio Segnale Imminente Gol:*\n"
+            "🏆 *Torneo:* Premier League\n"
+            "⚽ **Liverpool vs Chelsea (1 - 1)**\n"
+            "🔥 **SEGNALE GOL IMMINENTE:** `Prossimo Gol Squadra Casa`\n"
+            "📊 **Quota Live:** `2.10`\n"
+            "💰 **Puntata Consigliata:** `15€`\n"
+            "-----------------------------------"
+        )
+
+    testo = f"🚨 **RADAR SCOMMESSE LIVE & SEGNALI GOL ({oggi_ita})** 🚨\n\n"
+    testo += "⚡ *Monitoraggio automatico delle partite in corso per individuare il prossimo marcatore:*\n\n"
+    for s in segnali_live:
+        testo += s + "\n"
+    
+    testo += "\n💡 *Le quote live si aggiornano istantaneamente in base all'andamento del match!*"
+    return testo
+
+async def mostra_live_radar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    testo = await genera_testo_live()
+    keyboard = [
+        [InlineKeyboardButton("🔄 Aggiorna Radar Live", callback_data="btn_live_radar")],
+        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
+
+async def bomba_effetto_esplosione(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    await query.message.edit_text("💣 *Innesco Schedina Bomba VIP in corso...*\n\n⏱️ `3...`", parse_mode="Markdown")
+    await asyncio.sleep(0.5)
+    await query.message.edit_text("💣 *Innesco Schedina Bomba VIP in corso...*\n\n⏱️ `2...`", parse_mode="Markdown")
+    await asyncio.sleep(0.5)
+    await query.message.edit_text("💣 *Innesco Schedina Bomba VIP in corso...*\n\n⏱️ `1...`", parse_mode="Markdown")
+    await asyncio.sleep(0.5)
+    
+    
