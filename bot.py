@@ -1,5 +1,7 @@
 import os
 import logging
+import sys
+import traceback
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 from datetime import datetime
@@ -8,7 +10,7 @@ import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
 
-# Abilita i log di sistema
+# Abilita i log di sistema dettagliati
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -39,20 +41,24 @@ def fetch_from_football_api(endpoint_url):
             continue
     return None
 
-# 1. Server web fittizio per Render (Piano Free)
+# 1. Server web per Render (Piano Free)
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"Bot is online!")
+        self.wfile.write(b"Bot is online and running!")
         
     def log_message(self, format, *args):
         return
 
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(("0.0.0.0", port), SimpleHandler)
-    server.serve_forever()
+    try:
+        server = HTTPServer(("0.0.0.0", port), SimpleHandler)
+        logging.info(f"Server web avviato con successo sulla porta {port}")
+        server.serve_forever()
+    except Exception as e:
+        logging.error(f"Errore nell'avvio del server web sulla porta {port}: {e}")
 
 # 2. Menu Principale con i Pulsanti
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -177,7 +183,7 @@ async def genera_testo_schedina(tipo_sicurezza):
                 if count > 0:
                     matches_found = True
     except Exception as e:
-        logging.error(f"Errore: {e}")
+        logging.error(f"Errore API Schedina: {e}")
 
     if not matches_found:
         if tipo_sicurezza == "100":
@@ -268,7 +274,7 @@ async def genera_testo_bomba():
                     )
                 bomba_trovata = True
     except Exception as e:
-        logging.error(f"Errore: {e}")
+        logging.error(f"Errore API Bomba: {e}")
 
     if not bomba_trovata:
         quota_bomba = 24.50
@@ -325,50 +331,4 @@ async def genera_testo_live():
                         f"⚽ **{home} {hg} - {ag} {away}**\n"
                         f"🔥 **SEGNALE GOL IMMINENTE:** `Assedio offensivo / Over 0.5 Live`\n"
                         f"📊 **Quota Live Consigliata:** `1.85`\n"
-                        f"💰 **Puntata Consigliata:** `10€`\n"
-                        f"-----------------------------------"
-                    )
-    except Exception as e:
-        logging.error(f"Errore Live: {e}")
-
-    if not segnali_live:
-        segnali_live.append(
-            "🔴 **RADAR LIVE ATTIVO (Nessun match in corso adesso)**\n\n"
-            "⚽ *Esempio Segnale Imminente Gol:*\n"
-            "🏆 *Torneo:* Premier League\n"
-            "⚽ **Liverpool vs Chelsea (1 - 1)**\n"
-            "🔥 **SEGNALE GOL IMMINENTE:** `Prossimo Gol Squadra Casa`\n"
-            "📊 **Quota Live:** `2.10`\n"
-            "💰 **Puntata Consigliata:** `15€`\n"
-            "-----------------------------------"
-        )
-
-    testo = f"🚨 **RADAR SCOMMESSE LIVE & SEGNALI GOL ({oggi_ita})** 🚨\n\n"
-    testo += "⚡ *Monitoraggio automatico delle partite in corso per individuare il prossimo marcatore:*\n\n"
-    for s in segnali_live:
-        testo += s + "\n"
-    
-    testo += "\n💡 *Le quote live si aggiornano istantaneamente in base all'andamento del match!*"
-    return testo
-
-async def mostra_live_radar(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    testo = await genera_testo_live()
-    keyboard = [
-        [InlineKeyboardButton("🔄 Aggiorna Radar Live", callback_data="btn_live_radar")],
-        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
-
-async def bomba_effetto_esplosione(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    await query.message.edit_text("💣 *Innesco Schedina Bomba VIP in corso...*\n\n⏱️ `3...`", parse_mode="Markdown")
-    await asyncio.sleep(0.5)
-    await query.message.edit_text("💣 *Innesco Schedina Bomba VIP in corso...*\n\n⏱️ `2...`", parse_mode="Markdown")
-    await asyncio.sleep(0.5)
-    await query.message.edit_text("💣 *Innesco Schedina Bomba VIP in corso...*\n\n⏱️ `1...`", parse_mode="Markdown")
-    await asyncio.sleep(0.5)
-    
-    
+                        f"💰 **Puntata
