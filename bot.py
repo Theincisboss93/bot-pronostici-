@@ -14,8 +14,13 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# CREDENZIALI E API KEYS CONFIGURATE
-TOKEN = "9109962875:AAEfQyasxkN8Ddqm8I0PEmD3SwwgMBMkw3Y"
+# TOKEN MULTIPLI E API KEYS CONFIGURATI
+TOKENS = [
+    "9109962875:AAEfQyasxkN8Ddqm8I0PEmD3SwwgMBMkw3Y",
+    "8987770671:AAHZ5vFUWWT2t83Dbxr6wCeVyNrMP2zEQHM"
+]
+TOKEN = TOKENS[0]
+
 FOOTBALL_API_KEYS = [
     "be001fd3625a4f84b61b28e26ba101b2",
     "A7IauxgMoOQxH4XXRH8Eyflf16KC5OzoJ4tGb5ORCTMwqDg5VHpDaKadrl0O"
@@ -49,22 +54,24 @@ def run_web_server():
     server = HTTPServer(("0.0.0.0", port), SimpleHandler)
     server.serve_forever()
 
-# 2. Menu Principale con i 4 Pulsanti
+# 2. Menu Principale con i Pulsanti (incluse le Scommesse Live)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         "🤖 **BENVENUTO SU KING PRONOSTICI** ⚽\n\n"
-        "Seleziona la schedina desiderata:\n"
+        "Seleziona la schedina o l'area desiderata:\n"
         "• **100% Sicura**: Giocate singole blindate\n"
         "• **70% Sicura**: Ottimo equilibrio e valore\n"
         "• **50% Sicura**: Schedina ad alto rendimento\n"
-        "• **💣 Schedina Bomba VIP**: Partite reali del giorno ad altissimo moltiplicatore!"
+        "• **💣 Schedina Bomba VIP**: Partite reali del giorno\n"
+        "• **🔴 Radar Scommesse LIVE**: Segnali di gol in tempo reale!"
     )
     
     keyboard = [
         [InlineKeyboardButton("🛡️ Schedina 100% Sicura", callback_data="btn_100")],
         [InlineKeyboardButton("⚖️ Schedina 70% Sicura", callback_data="btn_70")],
         [InlineKeyboardButton("📊 Schedina 50% Sicura", callback_data="btn_50")],
-        [InlineKeyboardButton("💣 Schedina Bomba VIP (Partite del Giorno)", callback_data="btn_bomba_avvio")],
+        [InlineKeyboardButton("💣 Schedina Bomba VIP", callback_data="btn_bomba_avvio")],
+        [InlineKeyboardButton("🔴 Segnali LIVE & Imminente Gol", callback_data="btn_live_radar")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -274,93 +281,3 @@ async def genera_testo_bomba():
     quota_bomba = round(quota_bomba, 2)
     vincita_bomba = round(puntata_bomba * quota_bomba, 2)
 
-    testo = f"💣 **SCHEDINA BOMBA VIP DEL GIORNO ({oggi_ita})** 💣\n\n"
-    testo += "⚽ *Combinata ad altissimo rendimento con i match odierni*\n\n"
-    
-    for p in partite_bomba_list:
-        testo += p + "\n"
-
-    testo += "━━━━━━━━━━━━━━━━━━━\n"
-    testo += f"📊 **QUOTA TOTALE BOMBA:** `{quota_bomba}`\n"
-    testo += f"📈 **Sicurezza:** `3.5/10 (Rischio Alto VIP)`\n"
-    testo += f"💰 **Puntata consigliata:** `{puntata_bomba}€`\n"
-    testo += f"💵 **VINCITA COMPLESSIVA:** `{vincita_bomba}€`\n"
-    testo += "━━━━━━━━━━━━━━━━━━━\n"
-    testo += "⚠️ *Puntare solo il budget di svago!* 🍀"
-    
-    return testo
-
-async def bomba_effetto_esplosione(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    await query.message.edit_text("💣 *Innesco Schedina Bomba VIP in corso...*\n\n⏱️ `3...`", parse_mode="Markdown")
-    await asyncio.sleep(0.5)
-    await query.message.edit_text("💣 *Innesco Schedina Bomba VIP in corso...*\n\n⏱️ `2...`", parse_mode="Markdown")
-    await asyncio.sleep(0.5)
-    await query.message.edit_text("💣 *Innesco Schedina Bomba VIP in corso...*\n\n⏱️ `1...`", parse_mode="Markdown")
-    await asyncio.sleep(0.5)
-    
-    testo_bomba = await genera_testo_bomba()
-    keyboard_bomba = [
-        [InlineKeyboardButton("🔄 Aggiorna Bomba", callback_data="btn_bomba_avvio")],
-        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
-    ]
-    reply_markup_bomba = InlineKeyboardMarkup(keyboard_bomba)
-    await query.message.edit_text(testo_bomba, parse_mode="Markdown", reply_markup=reply_markup_bomba)
-
-async def mostra_100(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    testo = await genera_testo_schedina("100")
-    keyboard = [
-        [InlineKeyboardButton("🔄 Aggiorna", callback_data="btn_100")],
-        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
-
-async def mostra_70(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    testo = await genera_testo_schedina("70")
-    keyboard = [
-        [InlineKeyboardButton("🔄 Aggiorna", callback_data="btn_70")],
-        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
-
-async def mostra_50(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    testo = await genera_testo_schedina("50")
-    keyboard = [
-        [InlineKeyboardButton("🔄 Aggiorna", callback_data="btn_50")],
-        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
-
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    
-    if query.data == "btn_100":
-        await mostra_100(update, context)
-    elif query.data == "btn_70":
-        await mostra_70(update, context)
-    elif query.data == "btn_50":
-        await mostra_50(update, context)
-    elif query.data == "btn_bomba_avvio":
-        await bomba_effetto_esplosione(update, context)
-    elif query.data == "btn_menu":
-        await start(update, context)
-
-def main():
-    server_thread = threading.Thread(target=run_web_server, daemon=True)
-    server_thread.start()
-
-    application = ApplicationBuilder().token(TOKEN).build()
-
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button_handler))
-
-    logging.info("Bot avviato con successo!")
-    application.run_polling()
-
-if __name__ == '__main__':
-    main()
