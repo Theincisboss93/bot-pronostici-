@@ -56,7 +56,7 @@ class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"Bot is online and running perfectly!")
+        self.wfile.write(b"Bot is online and running perfectly in real-time automatic mode!")
         
     def log_message(self, format, *args):
         return
@@ -77,9 +77,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         USER_CHAT_ID = update.effective_chat.id
 
     welcome_text = (
-        "🤖 BENVENUTO SU KING PRONOSTICI ⚽\n\n"
+        "🤖 BENVENUTO SU KING PRONOSTICI (AUTOMATICO) ⚽\n\n"
         "Usa i **tasti interattivi** qui sotto oppure **scrivimi liberamente in chat** "
-        "(es. 'dammi la schedina 100', 'schedina bomba', 'live') per avere tutto all'istante!"
+        "(es. 'dammi la schedina 100', 'schedina bomba', 'live') per avere tutto in tempo reale!"
     )
     
     keyboard = [
@@ -96,7 +96,50 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif update.callback_query:
         await update.callback_query.message.edit_text(welcome_text, reply_markup=reply_markup)
 
-# Funzione generatrice delle schedine standard (filtrate per la giornata odierna)
+# Funzione intelligente di verifica esito in tempo reale
+def calcola_esito_partita(giocata, hg, ag, status):
+    if status == 'TIMED' or status == 'SCHEDULED':
+        return "⏳ In attesa"
+    elif status in ['IN_PLAY', 'PAUSED']:
+        return f"🔴 LIVE ({hg} - {ag})"
+    elif status == 'FINISHED':
+        tot_gol = hg + ag
+        vinta = False
+        
+        if giocata == "1X":
+            vinta = (hg >= ag)
+        elif giocata == "X2":
+            vinta = (ag >= hg)
+        elif giocata == "1":
+            vinta = (hg > ag)
+        elif giocata == "2":
+            vinta = (ag > hg)
+        elif giocata == "Over 1.5":
+            vinta = (tot_gol >= 2)
+        elif giocata == "Over 2.5":
+            vinta = (tot_gol >= 3)
+        elif giocata == "Under 3.5":
+            vinta = (tot_gol <= 3)
+        elif giocata == "Gol Casa":
+            vinta = (hg > 0)
+        elif giocata == "Gol (Entrambe Segnano)" or giocata == "Gol":
+            vinta = (hg > 0 and ag > 0)
+        elif giocata == "1 + Over 1.5":
+            vinta = (hg > ag and tot_gol >= 2)
+        elif giocata == "Gol + Over 2.5":
+            vinta = (hg > 0 and ag > 0 and tot_gol >= 3)
+        elif giocata == "1 & Gol":
+            vinta = (hg > ag and ag > 0)
+        else:
+            vinta = (tot_gol >= 1)
+            
+        if vinta:
+            return "✅ **VINTO!** 🎉"
+        else:
+            return "❌ **PERSO** 😢"
+    return "⏳ In attesa"
+
+# Funzione generatrice delle schedine standard (filtrate per la data odierna)
 async def genera_testo_schedina(tipo_sicurezza):
     oggi = datetime.now().strftime('%Y-%m-%d')
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
@@ -109,7 +152,7 @@ async def genera_testo_schedina(tipo_sicurezza):
     
     giocate_possibili_100 = ["1X", "Over 1.5", "Gol Casa", "Under 3.5"]
     giocate_possibili_70 = ["Gol (Entrambe Segnano)", "1", "Over 2.5", "X2 + Over 1.5"]
-    giocate_possibili_50 = ["1 + Over 2.5", "Gol + Over 2.5", "2 + Over 1.5", "1X + Gol"]
+    giocate_possibili_50 = ["1 + Over 2.5", "Gol + Over 2.5", "2 + Over 1.5", "1 + Over 1.5"]
     
     if tipo_sicurezza == "100":
         titolo_schedina = f"🛡️ SCHEDINA 100% SICURA ({oggi_ita})"
@@ -141,6 +184,10 @@ async def genera_testo_schedina(tipo_sicurezza):
                     competition = match.get('competition', {}).get('name', 'Campionato')
                     status = match.get('status', 'SCHEDULED')
                     
+                    score = match.get('score', {}).get('fullTime', {})
+                    hg = score.get('home', 0) if score.get('home') is not None else 0
+                    ag = score.get('away', 0) if score.get('away') is not None else 0
+                    
                     if tipo_sicurezza == "100":
                         giocata = giocate_possibili_100[i % len(giocate_possibili_100)]
                         q = round(1.20 + (i * 0.05), 2)
@@ -152,22 +199,8 @@ async def genera_testo_schedina(tipo_sicurezza):
                         q = round(2.30 + (i * 0.15), 2)
                         
                     quota_totale *= q
-                    esito_str = "In attesa"
-                    
-                    if status == 'FINISHED':
-                        score = match.get('score', {}).get('fullTime', {})
-                        hg = score.get('home', 0)
-                        ag = score.get('away', 0)
-                        esito_str = "VINTO!" if (hg + ag) >= 1 else "PERSO"
-                        match_title = f"{home} {hg} - {ag} {away}"
-                    elif status in ['IN_PLAY', 'PAUSED']:
-                        score = match.get('score', {}).get('fullTime', {})
-                        hg = score.get('home', 0)
-                        ag = score.get('away', 0)
-                        esito_str = f"LIVE ({hg} - {ag})"
-                        match_title = f"{home} vs {away}"
-                    else:
-                        match_title = f"{home} vs {away}"
+                    esito_str = calcola_esito_partita(giocata, hg, ag, status)
+                    match_title = f"{home} {hg} - {ag} {away}" if status == 'FINISHED' else f"{home} vs {away}"
 
                     partite_list.append(
                         f"Torneo: {competition}\n"
@@ -183,8 +216,8 @@ async def genera_testo_schedina(tipo_sicurezza):
 
     if not matches_found:
         partite_list = [
-            f"Torneo: Partite Odierne ({oggi_ita})\n⚽ Evento Principale 1 vs Evento Principale 2\n🎯 Giocata: 1X | Quota: 1.35 | Esito: In attesa\n",
-            f"Torneo: Partite Odierne ({oggi_ita})\n⚽ Evento Principale 3 vs Evento Principale 4\n🎯 Giocata: Over 1.5 | Quota: 1.40 | Esito: In attesa\n"
+            f"Torneo: Partite Odierne ({oggi_ita})\n⚽ Evento 1 vs Evento 2\n🎯 Giocata: 1X | Quota: 1.35 | 📌 Esito: ⏳ In attesa\n",
+            f"Torneo: Partite Odierne ({oggi_ita})\n⚽ Evento 3 vs Evento 4\n🎯 Giocata: Over 1.5 | Quota: 1.40 | 📌 Esito: ⏳ In attesa\n"
         ]
         quota_totale = 1.89
 
@@ -215,6 +248,8 @@ async def genera_testo_bomba():
     puntata_bomba = 5
     trovate = False
 
+    giocate_bomba_list = ["1 + Over 1.5", "Gol + Over 2.5", "1 & Gol"]
+
     try:
         data = fetch_from_football_api(url)
         if data and "matches" in data:
@@ -224,10 +259,21 @@ async def genera_testo_bomba():
                     home = match.get('homeTeam', {}).get('name', 'Casa')
                     away = match.get('awayTeam', {}).get('name', 'Ospiti')
                     comp = match.get('competition', {}).get('name', 'Torneo')
+                    status = match.get('status', 'SCHEDULED')
+                    
+                    score = match.get('score', {}).get('fullTime', {})
+                    hg = score.get('home', 0) if score.get('home') is not None else 0
+                    ag = score.get('away', 0) if score.get('away') is not None else 0
+                    
+                    giocata = giocate_bomba_list[i % len(giocate_bomba_list)]
                     q = round(2.20 + (i * 0.30), 2)
                     quota_bomba *= q
+                    
+                    esito_str = calcola_esito_partita(giocata, hg, ag, status)
+                    match_title = f"{home} {hg} - {ag} {away}" if status == 'FINISHED' else f"{home} vs {away}"
+
                     partite_bomba_list.append(
-                        f"Torneo: {comp}\n⚽ {home} vs {away}\n🎯 Giocata: 1 + Over 1.5 | Quota: {q} | Esito: In attesa\n"
+                        f"Torneo: {comp}\n⚽ {match_title}\n🎯 Giocata: {giocata} | Quota: {q}\n📌 Esito: {esito_str}\n"
                     )
                 trovate = True
     except Exception as e:
@@ -236,9 +282,9 @@ async def genera_testo_bomba():
     if not trovate:
         quota_bomba = 15.50
         partite_bomba_list = [
-            f"Torneo: Serie A ({oggi_ita})\n⚽ Squadra A vs Squadra B\n🎯 Giocata: 1 + Over 1.5 | Quota: 2.50 | Esito: In attesa\n",
-            f"Torneo: Premier League ({oggi_ita})\n⚽ Squadra C vs Squadra D\n🎯 Giocata: Gol + Over 2.5 | Quota: 2.50 | Esito: In attesa\n",
-            f"Torneo: Champions League ({oggi_ita})\n⚽ Squadra E vs Squadra F\n🎯 Giocata: 1 & Gol | Quota: 2.48 | Esito: In attesa\n"
+            f"Torneo: Serie A ({oggi_ita})\n⚽ Squadra A vs Squadra B\n🎯 Giocata: 1 + Over 1.5 | Quota: 2.50 | 📌 Esito: ⏳ In attesa\n",
+            f"Torneo: Premier League ({oggi_ita})\n⚽ Squadra C vs Squadra D\n🎯 Giocata: Gol + Over 2.5 | Quota: 2.50 | 📌 Esito: ⏳ In attesa\n",
+            f"Torneo: Champions League ({oggi_ita})\n⚽ Squadra E vs Squadra F\n🎯 Giocata: 1 & Gol | Quota: 2.48 | 📌 Esito: ⏳ In attesa\n"
         ]
 
     quota_bomba = round(quota_bomba, 2)
@@ -352,7 +398,7 @@ async def mostra_live_radar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.callback_query.message.edit_text(testo, reply_markup=reply_markup)
 
-# BACKGROUND THREAD: Notifiche push automatiche in chat
+# BACKGROUND THREAD: Notifiche push automatiche in tempo reale in chat
 def background_live_notifier():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -360,130 +406,4 @@ def background_live_notifier():
     async def worker():
         notiziario_inviato = set()
         while True:
-            await asyncio.sleep(45)
-            global USER_CHAT_ID, BOT_APPLICATION
-            if USER_CHAT_ID and BOT_APPLICATION:
-                oggi = datetime.now().strftime('%Y-%m-%d')
-                url = f"https://api.football-data.org/v4/matches?date={oggi}"
-                try:
-                    data = fetch_from_football_api(url)
-                    if data and "matches" in data:
-                        matches = data.get("matches", [])
-                        for match in matches:
-                            match_id = match.get('id')
-                            status = match.get('status', '')
-                            
-                            if status == 'IN_PLAY':
-                                home = match.get('homeTeam', {}).get('name', 'Casa')
-                                away = match.get('awayTeam', {}).get('name', 'Ospiti')
-                                competition = match.get('competition', {}).get('name', 'Campionato')
-                                score = match.get('score', {}).get('fullTime', {})
-                                hg = score.get('home', 0)
-                                ag = score.get('away', 0)
-                                
-                                match_key = f"{match_id}_{hg}_{ag}"
-                                if match_key not in notiziario_inviato:
-                                    notifica_text = (
-                                        f"🚨 NOTIFICA PUSH LIVE AUTOMATICA ({competition}) 🚨\n\n"
-                                        f"⚽ {home} {hg} - {ag} {away}\n"
-                                        f"🔥 CHI PUNTARE: Prossimo Gol / Assedio\n"
-                                        f"🎯 Cosa giocare: Over 0.5 Live\n"
-                                        f"📊 Quota Live: 1.95\n"
-                                        f"💰 Puntata consigliata: 12€\n\n"
-                                        f"Piazzala subito prima del cambio quota!"
-                                    )
-                                    await BOT_APPLICATION.bot.send_message(chat_id=USER_CHAT_ID, text=notifica_text)
-                                    notiziario_inviato.add(match_key)
-                except Exception as e:
-                    logging.error(f"Errore nel worker di notifica push live: {e}")
-
-    loop.run_until_complete(worker())
-
-async def bomba_effetto_esplosione(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    await query.message.edit_text("💣 Innesco Schedina Bomba VIP in corso...\n\n3...")
-    await asyncio.sleep(0.5)
-    await query.message.edit_text("💣 Innesco Schedina Bomba VIP in corso...\n\n2...")
-    await asyncio.sleep(0.5)
-    await query.message.edit_text("💣 Innesco Schedina Bomba VIP in corso...\n\n1...")
-    await asyncio.sleep(0.5)
-    
-    testo_bomba = await genera_testo_bomba()
-    keyboard_bomba = [
-        [InlineKeyboardButton("Aggiorna Bomba", callback_data="btn_bomba_avvio")],
-        [InlineKeyboardButton("Torna al Menu Principale", callback_data="btn_menu")]
-    ]
-    reply_markup_bomba = InlineKeyboardMarkup(keyboard_bomba)
-    await query.message.edit_text(testo_bomba, reply_markup=reply_markup_bomba)
-
-async def mostra_100(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    testo = await genera_testo_schedina("100")
-    keyboard = [
-        [InlineKeyboardButton("Aggiorna", callback_data="btn_100")],
-        [InlineKeyboardButton("Torna al Menu Principale", callback_data="btn_menu")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.callback_query.message.edit_text(testo, reply_markup=reply_markup)
-
-async def mostra_70(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    testo = await genera_testo_schedina("70")
-    keyboard = [
-        [InlineKeyboardButton("Aggiorna", callback_data="btn_70")],
-        [InlineKeyboardButton("Torna al Menu Principale", callback_data="btn_menu")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.callback_query.message.edit_text(testo, reply_markup=reply_markup)
-
-async def mostra_50(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    testo = await genera_testo_schedina("50")
-    keyboard = [
-        [InlineKeyboardButton("Aggiorna", callback_data="btn_50")],
-        [InlineKeyboardButton("Torna al Menu Principale", callback_data="btn_menu")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.callback_query.message.edit_text(testo, reply_markup=reply_markup)
-
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    
-    if query.data == "btn_100":
-        await mostra_100(update, context)
-    elif query.data == "btn_70":
-        await mostra_70(update, context)
-    elif query.data == "btn_50":
-        await mostra_50(update, context)
-    elif query.data == "btn_bomba_avvio":
-        await bomba_effetto_esplosione(update, context)
-    elif query.data == "btn_live_radar":
-        await mostra_live_radar(update, context)
-    elif query.data == "btn_menu":
-        await start(update, context)
-
-def main():
-    global BOT_APPLICATION
-    try:
-        server_thread = threading.Thread(target=run_web_server, daemon=True)
-        server_thread.start()
-
-        application = ApplicationBuilder().token(TOKEN).build()
-        BOT_APPLICATION = application
-
-        application.add_handler(CommandHandler("start", start))
-        application.add_handler(CallbackQueryHandler(button_handler))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat_assistant_handler))
-
-        notifier_thread = threading.Thread(target=background_live_notifier, daemon=True)
-        notifier_thread.start()
-
-        logging.info("Bot avviato con successo: tasti, chat e notifiche live perfettamente attivi!")
-        application.run_polling(drop_pending_updates=True)
-        
-    except Exception as e:
-        logging.critical(f"Errore critico durante l'avvio del bot: {e}")
-        traceback.print_exc()
-        sys.exit(1)
-
-if __name__ == '__main__':
-    main()
+            
