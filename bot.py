@@ -331,4 +331,122 @@ async def genera_testo_live():
                         f"⚽ **{home} {hg} - {ag} {away}**\n"
                         f"🔥 **SEGNALE GOL IMMINENTE:** `Assedio offensivo / Over 0.5 Live`\n"
                         f"📊 **Quota Live Consigliata:** `1.85`\n"
-                        f"💰 **Puntata
+                        f"💰 **Puntata Consigliata:** `10€`\n"
+                        f"-----------------------------------"
+                    )
+    except Exception as e:
+        logging.error(f"Errore Live: {e}")
+
+    if not segnali_live:
+        segnali_live.append(
+            "🔴 **RADAR LIVE ATTIVO (Nessun match in corso adesso)**\n\n"
+            "⚽ *Esempio Segnale Imminente Gol:*\n"
+            "🏆 *Torneo:* Premier League\n"
+            "⚽ **Liverpool vs Chelsea (1 - 1)**\n"
+            "🔥 **SEGNALE GOL IMMINENTE:** `Prossimo Gol Squadra Casa`\n"
+            "📊 **Quota Live:** `2.10`\n"
+            "💰 **Puntata Consigliata:** `15€`\n"
+            "-----------------------------------"
+        )
+
+    testo = f"🚨 **RADAR SCOMMESSE LIVE & SEGNALI GOL ({oggi_ita})** 🚨\n\n"
+    testo += "⚡ *Monitoraggio automatico delle partite in corso per individuare il prossimo marcatore:*\n\n"
+    for s in segnali_live:
+        testo += s + "\n"
+    
+    testo += "\n💡 *Le quote live si aggiornano istantaneamente in base all'andamento del match!*"
+    return testo
+
+async def mostra_live_radar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    testo = await genera_testo_live()
+    keyboard = [
+        [InlineKeyboardButton("🔄 Aggiorna Radar Live", callback_data="btn_live_radar")],
+        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
+
+async def bomba_effetto_esplosione(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    await query.message.edit_text("💣 *Innesco Schedina Bomba VIP in corso...*\n\n⏱️ `3...`", parse_mode="Markdown")
+    await asyncio.sleep(0.5)
+    await query.message.edit_text("💣 *Innesco Schedina Bomba VIP in corso...*\n\n⏱️ `2...`", parse_mode="Markdown")
+    await asyncio.sleep(0.5)
+    await query.message.edit_text("💣 *Innesco Schedina Bomba VIP in corso...*\n\n⏱️ `1...`", parse_mode="Markdown")
+    await asyncio.sleep(0.5)
+    
+    testo_bomba = await genera_testo_bomba()
+    keyboard_bomba = [
+        [InlineKeyboardButton("🔄 Aggiorna Bomba", callback_data="btn_bomba_avvio")],
+        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
+    ]
+    reply_markup_bomba = InlineKeyboardMarkup(keyboard_bomba)
+    await query.message.edit_text(testo_bomba, parse_mode="Markdown", reply_markup=reply_markup_bomba)
+
+async def mostra_100(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    testo = await genera_testo_schedina("100")
+    keyboard = [
+        [InlineKeyboardButton("🔄 Aggiorna", callback_data="btn_100")],
+        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
+
+async def mostra_70(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    testo = await genera_testo_schedina("70")
+    keyboard = [
+        [InlineKeyboardButton("🔄 Aggiorna", callback_data="btn_70")],
+        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
+
+async def mostra_50(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    testo = await genera_testo_schedina("50")
+    keyboard = [
+        [InlineKeyboardButton("🔄 Aggiorna", callback_data="btn_50")],
+        [InlineKeyboardButton("🔙 Torna al Menu Principale", callback_data="btn_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.callback_query.message.edit_text(testo, parse_mode="Markdown", reply_markup=reply_markup)
+
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    
+    if query.data == "btn_100":
+        await mostra_100(update, context)
+    elif query.data == "btn_70":
+        await mostra_70(update, context)
+    elif query.data == "btn_50":
+        await mostra_50(update, context)
+    elif query.data == "btn_bomba_avvio":
+        await bomba_effetto_esplosione(update, context)
+    elif query.data == "btn_live_radar":
+        await mostra_live_radar(update, context)
+    elif query.data == "btn_menu":
+        await start(update, context)
+
+def main():
+    try:
+        # Avvia il server web in un thread separato
+        server_thread = threading.Thread(target=run_web_server, daemon=True)
+        server_thread.start()
+
+        # Configura l'applicazione Telegram
+        application = ApplicationBuilder().token(TOKEN).build()
+
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CallbackQueryHandler(button_handler))
+
+        logging.info("Bot avviato con successo e in ascolto...")
+        application.run_polling(drop_pending_updates=True)
+        
+    except Exception as e:
+        logging.critical(f"Errore critico durante l'avvio del bot: {e}")
+        traceback.print_exc()
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()
