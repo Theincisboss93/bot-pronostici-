@@ -406,4 +406,30 @@ def background_live_notifier():
     async def worker():
         notiziario_inviato = set()
         while True:
-            
+            await asyncio.sleep(45)
+            global USER_CHAT_ID, BOT_APPLICATION
+            if USER_CHAT_ID and BOT_APPLICATION:
+                oggi = datetime.now().strftime('%Y-%m-%d')
+                url = f"https://api.football-data.org/v4/matches?date={oggi}"
+                try:
+                    data = fetch_from_football_api(url)
+                    if data and "matches" in data:
+                        matches = data.get("matches", [])
+                        for match in matches:
+                            match_id = match.get('id')
+                            status = match.get('status', '')
+                            
+                            if status == 'IN_PLAY':
+                                home = match.get('homeTeam', {}).get('name', 'Casa')
+                                away = match.get('awayTeam', {}).get('name', 'Ospiti')
+                                competition = match.get('competition', {}).get('name', 'Campionato')
+                                score = match.get('score', {}).get('fullTime', {})
+                                hg = score.get('home', 0)
+                                ag = score.get('away', 0)
+                                
+                                match_key = f"{match_id}_{hg}_{ag}"
+                                if match_key not in notiziario_inviato:
+                                    notifica_text = (
+                                        f"🚨 NOTIFICA PUSH LIVE AUTOMATICA ({competition}) 🚨\n\n"
+                                        f"⚽ {home} {hg} - {ag} {away}\n"
+                                        
