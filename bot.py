@@ -500,4 +500,9 @@ async def get_invite_link_handler(update: Update, context: ContextTypes.DEFAULT_
 
 # --- HANDLER MESSAGGI ---
 async def chat_assistant_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message or
+    if not update.message or not update.message.text:
+        return
+
+    testo = update.message.text.lower()
+    if "bomba" in testo or "schedina" in testo:
+        await update.message.reply_text(await genera_testo_schedina
