@@ -179,7 +179,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         
         keyboard = [
-            [InlineKeyboardButton("🔥 Schedina Bomba & Percentuali", callback_data="btn_schedina_bomba")],
+            [InlineKeyboardButton("🎯 Schedina 100%", callback_data="btn_schedina_100"), InlineKeyboardButton("📊 Schedina 70%", callback_data="btn_schedina_70")],
+            [InlineKeyboardButton("📈 Schedina 50%", callback_data="btn_schedina_50"), InlineKeyboardButton("💣 Bomba Schedina", callback_data="btn_schedina_bomba")],
             [InlineKeyboardButton("📅 Partite e Risultati Oggi", callback_data="btn_partite_oggi")],
             [InlineKeyboardButton("🔴 Monitoraggio LIVE", callback_data="btn_live_radar")],
             [InlineKeyboardButton("📊 Gestione Bankroll & Stake", callback_data="btn_bankroll")],
@@ -206,7 +207,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logging.error(f"Errore in start: {e}")
 
-async def genera_testo_schedina_bomba():
+# --- 4 SCHEDINE SEPARATE E DISTINTE ---
+async def genera_schedina_singola(tipo, chat_id=1220916735):
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
     url = f"https://api.football-data.org/v4/matches?date={datetime.now().strftime('%Y-%m-%d')}"
     
@@ -221,23 +223,66 @@ async def genera_testo_schedina_bomba():
     except Exception:
         pass
 
-    m1 = match_trovati[0] if len(match_trovati) > 0 else "Real Madrid vs Barcellona"
-    m2 = match_trovati[1] if len(match_trovati) > 1 else "Inter vs Milan"
-    m3 = match_trovati[2] if len(match_trovati) > 2 else "Manchester City vs Arsenal"
-    m4 = match_trovati[3] if len(match_trovati) > 3 else "Bayern Monaco vs Dortmund"
+    u_data = get_user_data(chat_id)
+    bankroll = u_data["bankroll"]
 
-    return (
-        f"🔥 **SCHEDINA DEL GIORNO & PERCENTUALI ({oggi_ita})** 🔥\n\n"
-        f"🎯 **Quota 100% (Affidabilità Massima):**\n"
-        f"⚽ {m1} -> **Over 1.5 / Segna Goal**\n\n"
-        f"📊 **Quota 70% (Alta Probabilità):**\n"
-        f"⚽ {m2} -> **Gol / Over 2.5**\n\n"
-        f"📈 **Quota 50% (Rischio Calcolato):**\n"
-        f"⚽ {m3} -> **1X + Over 1.5**\n\n"
-        f"💣 **LA BOMBA DEL GIORNO (Quota Alta):**\n"
-        f"⚽ {m4} -> **Risultato Esatto / Combo 1X + Goal**\n\n"
-        "⚠️ _Gioca responsabilmente._"
-    )
+    if tipo == "100":
+        m = match_trovati[0] if len(match_trovati) > 0 else "Real Madrid vs Barcellona"
+        quota = 1.35
+        stake = round(bankroll * 0.05, 2)
+        vincita = round(stake * quota, 2)
+        return (
+            f"🎯 **SCHEDINA 100% (Affidabilità Massima) - {oggi_ita}**\n\n"
+            f"⚽ Partita: **{m}**\n"
+            f"📌 Giocata consigliata: **Over 1.5 / Segna Goal**\n"
+            f"📊 Quota: **{quota}**\n"
+            f"💰 Puntata consigliata (5%): **{stake}€**\n"
+            f"🏆 Vincita potenziale: **{vincita}€**\n\n"
+            "⚠️ _Gioca responsabilmente._"
+        )
+    elif tipo == "70":
+        m = match_trovati[1] if len(match_trovati) > 1 else "Inter vs Milan"
+        quota = 1.70
+        stake = round(bankroll * 0.04, 2)
+        vincita = round(stake * quota, 2)
+        return (
+            f"📊 **SCHEDINA 70% (Alta Probabilità) - {oggi_ita}**\n\n"
+            f"⚽ Partita: **{m}**\n"
+            f"📌 Giocata consigliata: **Gol / Over 2.5**\n"
+            f"📊 Quota: **{quota}**\n"
+            f"💰 Puntata consigliata (4%): **{stake}€**\n"
+            f"🏆 Vincita potenziale: **{vincita}€**\n\n"
+            "⚠️ _Gioca responsabilmente._"
+        )
+    elif tipo == "50":
+        m = match_trovati[2] if len(match_trovati) > 2 else "Manchester City vs Arsenal"
+        quota = 2.10
+        stake = round(bankroll * 0.03, 2)
+        vincita = round(stake * quota, 2)
+        return (
+            f"📈 **SCHEDINA 50% (Rischio Calcolato) - {oggi_ita}**\n\n"
+            f"⚽ Partita: **{m}**\n"
+            f"📌 Giocata consigliata: **1X + Over 1.5**\n"
+            f"📊 Quota: **{quota}**\n"
+            f"💰 Puntata consigliata (3%): **{stake}€**\n"
+            f"🏆 Vincita potenziale: **{vincita}€**\n\n"
+            "⚠️ _Gioca responsabilmente._"
+        )
+    elif tipo == "bomba":
+        m = match_trovati[3] if len(match_trovati) > 3 else "Bayern Monaco vs Dortmund"
+        quota = 4.50
+        stake = round(bankroll * 0.02, 2)
+        vincita = round(stake * quota, 2)
+        return (
+            f"💣 **BOMBA SCHEDINA (Quota Alta) - {oggi_ita}**\n\n"
+            f"⚽ Partita: **{m}**\n"
+            f"📌 Giocata consigliata: **Risultato Esatto / Combo**\n"
+            f"📊 Quota: **{quota}**\n"
+            f"💰 Puntata consigliata (2% - Prudente): **{stake}€**\n"
+            f"🏆 Vincita potenziale: **{vincita}€**\n\n"
+            "⚠️ _Gioca responsabilmente._"
+        )
+    return "Seleziona una schedina valida."
 
 async def genera_testo_partite_oggi():
     oggi = datetime.now().strftime('%Y-%m-%d')
@@ -296,17 +341,49 @@ async def genera_testo_live():
                     ag = score.get('away', 0)
                     
                     segnali_live.append(
-                        f"🔴 LIVE ({comp})\n"
+                        f"🔴 **SEGNALE LIVE DA GIOCARE!** ({comp})\n"
                         f"⚽ {home} {hg} - {ag} {away}\n"
+                        f"💡 **Cosa scommettere in live:** Valutare Over 0.5 / 1.5 o Gol in base all'andamento in campo.\n"
                         f"-----------------------------------\n"
                     )
     except Exception as e:
         logging.error(f"Errore Live: {e}")
 
     if not segnali_live:
-        segnali_live.append("Nessuna partita in corso in questo momento.")
+        segnali_live.append("Nessuna partita in corso con segnali live attivi in questo momento.")
 
     return f"🚨 MONITORAGGIO MATCH LIVE ({oggi_ita}) 🚨\n\n" + "\n".join(segnali_live)
+
+async def job_notifiche_live(context: ContextTypes.DEFAULT_TYPE):
+    oggi = datetime.now().strftime('%Y-%m-%d')
+    url = f"https://api.football-data.org/v4/matches?date={oggi}"
+    try:
+        data = fetch_from_football_api(url)
+        if data and "matches" in data:
+            for match in data.get("matches", []):
+                if match.get('status') in ['IN_PLAY', 'PAUSED']:
+                    home = match.get('homeTeam', {}).get('name', 'Casa')
+                    away = match.get('awayTeam', {}).get('name', 'Ospiti')
+                    score = match.get('score', {}).get('fullTime', {})
+                    hg = score.get('home', 0)
+                    ag = score.get('away', 0)
+                    
+                    notif_text = (
+                        f"🚨 **NOTIFICA LIVE: COSA SCOMMETTERE ORA!** 🚨\n\n"
+                        f"⚽ **{home} {hg} - {ag} {away}**\n"
+                        f"🔥 Match caldo in corso! Ottima occasione per puntare in live.\n"
+                        f"Controlla le quote sul tuo bookmaker!"
+                    )
+                    
+                    utenti = get_all_users()
+                    for uid in utenti:
+                        try:
+                            await context.bot.send_message(chat_id=uid, text=notif_text)
+                        except Exception:
+                            pass
+                    break
+    except Exception as e:
+        logging.error(f"Errore job notifiche live: {e}")
 
 async def genera_testo_fonti():
     return (
@@ -387,6 +464,21 @@ async def mostra_info_vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text(testo, reply_markup=InlineKeyboardMarkup(keyboard))
     except Exception as e:
         logging.error(f"Errore info vip: {e}")
+
+async def admin_panel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_chat.id != ADMIN_CHAT_ID:
+        await update.message.reply_text("❌ Non autorizzato.")
+        return
+    
+    testo = (
+        "👑 **PANNELLO DI CONTROLLO ADMIN** 👑\n\n"
+        "Comandi disponibili:\n"
+        "• `/setvip <chat_id> <giorni>` -> Attiva VIP a tempo.\n"
+        "• `/givevip <chat_id>` -> Attiva VIP illimitato gratuito.\n"
+        "• `/broadcast <messaggio>` -> Invia un messaggio a tutti gli utenti del bot.\n"
+        "• `/setbankroll <valore>` -> Modifica il bankroll."
+    )
+    await update.message.reply_text(testo)
 
 async def setvip_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id != ADMIN_CHAT_ID:
@@ -491,8 +583,18 @@ async def chat_assistant_handler(update: Update, context: ContextTypes.DEFAULT_T
             return
 
         testo = update.message.text.lower()
-        if "bomba" in testo or "schedina" in testo:
-            risposta = await genera_testo_schedina_bomba()
+        chat_id = update.effective_chat.id
+        if "100" in testo:
+            risposta = await genera_schedina_singola("100", chat_id)
+            await update.message.reply_text(risposta)
+        elif "70" in testo:
+            risposta = await genera_schedina_singola("70", chat_id)
+            await update.message.reply_text(risposta)
+        elif "50" in testo:
+            risposta = await genera_schedina_singola("50", chat_id)
+            await update.message.reply_text(risposta)
+        elif "bomba" in testo or "schedina" in testo:
+            risposta = await genera_schedina_singola("bomba", chat_id)
             await update.message.reply_text(risposta)
         elif "live" in testo or "partite" in testo:
             risposta = await genera_testo_partite_oggi()
@@ -510,8 +612,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
         
-        if query.data == "btn_schedina_bomba":
-            text = await genera_testo_schedina_bomba()
+        chat_id = query.message.chat_id
+        if query.data in ["btn_schedina_100", "btn_schedina_70", "btn_schedina_50", "btn_schedina_bomba"]:
+            tipo_map = {"btn_schedina_100": "100", "btn_schedina_70": "70", "btn_schedina_50": "50", "btn_schedina_bomba": "bomba"}
+            text = await genera_schedina_singola(tipo_map[query.data], chat_id)
             try:
                 await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
             except Exception:
@@ -552,7 +656,11 @@ def main():
 
         application = ApplicationBuilder().token(TOKEN).build()
         
+        job_queue = application.job_queue
+        job_queue.run_repeating(job_notifiche_live, interval=900, first=10)
+
         application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("admin", admin_panel_command))
         application.add_handler(CommandHandler("setbankroll", set_bankroll_command))
         application.add_handler(CommandHandler("setvip", setvip_command))
         application.add_handler(CommandHandler("givevip", givevip_command))
