@@ -11,7 +11,6 @@ import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler, MessageHandler, filters
 
-# Configurazione Logging pulito
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -31,10 +30,8 @@ FOOTBALL_API_KEYS = [
 ADMIN_USERNAME = "Theincisboss" 
 ADMIN_CHAT_ID = 1220916735  
 
-# ⚠️ IL TUO CANALE PRIVATO VIP (Ricordati di rendere il bot Amministratore del canale!)
 CHANNEL_PRIVATO = "@KingPronosticiVIP"
 
-# --- DATABASE LOCALE (SQLite SICURO) ---
 def init_db():
     try:
         conn = sqlite3.connect("bot_database.db", timeout=20)
@@ -146,7 +143,6 @@ def fetch_from_football_api(endpoint_url):
                 return res
     return None
 
-# --- WEB SERVER PER RENDER (KEEP-ALIVE / UPTIMEROBOT) ---
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -165,7 +161,6 @@ def run_web_server():
     except Exception as e:
         logging.error(f"Errore server web: {e}")
 
-# --- MENU PRINCIPALE ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         chat = update.effective_chat
@@ -212,7 +207,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logging.error(f"Errore in start: {e}")
 
-# --- SCHEDINA BOMBA & PERCENTUALI ---
 async def genera_testo_schedina_bomba():
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
     url = f"https://api.football-data.org/v4/matches?date={datetime.now().strftime('%Y-%m-%d')}"
@@ -246,7 +240,6 @@ async def genera_testo_schedina_bomba():
         "⚠️ _Gioca responsabilmente._"
     )
 
-# --- PARTITE E CALENDARIO LIVE ---
 async def genera_testo_partite_oggi():
     oggi = datetime.now().strftime('%Y-%m-%d')
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
@@ -285,7 +278,6 @@ async def genera_testo_partite_oggi():
     
     return testo
 
-# --- MONITORAGGIO LIVE ---
 async def genera_testo_live():
     oggi = datetime.now().strftime('%Y-%m-%d')
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
@@ -317,7 +309,6 @@ async def genera_testo_live():
 
     return f"🚨 MONITORAGGIO MATCH LIVE ({oggi_ita}) 🚨\n\n" + "\n".join(segnali_live)
 
-# --- FONTI DI ANALISI ---
 async def genera_testo_fonti():
     return (
         "🔍 **SITI E FONTI DI ANALISI PROFESSIONALE** 📊\n\n"
@@ -328,7 +319,6 @@ async def genera_testo_fonti():
         "5. **Sofascore**: https://www.sofascore.com/it/"
     )
 
-# --- BANKROLL ---
 async def mostra_bankroll_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         query = update.callback_query
@@ -372,7 +362,6 @@ async def set_bankroll_command(update: Update, context: ContextTypes.DEFAULT_TYP
     except ValueError:
         await update.message.reply_text("❌ Valore non valido. Usa es: /setbankroll 150")
 
-# --- AREA VIP & PAGAMENTO MANUALE ---
 async def mostra_info_vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         query = update.callback_query
@@ -400,7 +389,6 @@ async def mostra_info_vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logging.error(f"Errore info vip: {e}")
 
-# --- COMANDI ADMIN ---
 async def setvip_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id != ADMIN_CHAT_ID:
         await update.message.reply_text("❌ Non autorizzato.")
@@ -498,11 +486,88 @@ async def get_invite_link_handler(update: Update, context: ContextTypes.DEFAULT_
     except Exception as e:
         logging.error(f"Errore get invite link: {e}")
 
-# --- HANDLER MESSAGGI ---
 async def chat_assistant_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message or not update.message.text:
-        return
+    try:
+        if not update.message or not update.message.text:
+            return
 
-    testo = update.message.text.lower()
-    if "bomba" in testo or "schedina" in testo:
-        await update.message.reply_text(await genera_testo_schedina
+        testo = update.message.text.lower()
+        if "bomba" in testo or "schedina" in testo:
+            risposta = await genera_testo_schedina_bomba()
+            await update.message.reply_text(risposta)
+        elif "live" in testo or "partite" in testo:
+            risposta = await genera_testo_partite_oggi()
+            await update.message.reply_text(risposta)
+        else:
+            await update.message.reply_text("🤖 Usa /start per aprire il menu principale.")
+    except Exception as e:
+        logging.error(f"Errore chat_assistant_handler: {e}")
+
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        query = update.callback_query
+        try:
+            await query.answer()
+        except Exception:
+            pass
+        
+        if query.data == "btn_schedina_bomba":
+            text = await genera_testo_schedina_bomba()
+            try:
+                await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
+            except Exception:
+                await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
+        elif query.data == "btn_partite_oggi":
+            text = await genera_testo_partite_oggi()
+            try:
+                await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
+            except Exception:
+                await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
+        elif query.data == "btn_live_radar":
+            text = await genera_testo_live()
+            try:
+                await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
+            except Exception:
+                await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
+        elif query.data == "btn_fonti_analisi":
+            text = await genera_testo_fonti()
+            try:
+                await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]), disable_web_page_preview=True)
+            except Exception:
+                await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]), disable_web_page_preview=True)
+        elif query.data == "btn_bankroll":
+            await mostra_bankroll_menu(update, context)
+        elif query.data == "btn_vip":
+            await mostra_info_vip(update, context)
+        elif query.data == "btn_get_link":
+            await get_invite_link_handler(update, context)
+        elif query.data == "btn_menu":
+            await start(update, context)
+    except Exception as e:
+        logging.error(f"Errore gestione bottoni: {e}")
+
+def main():
+    try:
+        server_thread = threading.Thread(target=run_web_server, daemon=True)
+        server_thread.start()
+
+        application = ApplicationBuilder().token(TOKEN).build()
+        
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("setbankroll", setbankroll_command))
+        application.add_handler(CommandHandler("setvip", setvip_command))
+        application.add_handler(CommandHandler("givevip", givevip_command))
+        application.add_handler(CommandHandler("broadcast", broadcast_command))
+        application.add_handler(CommandHandler("termini", termini_command))
+        application.add_handler(CallbackQueryHandler(button_handler))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat_assistant_handler))
+
+        logging.info("Bot King Pronostici Pro avviato con successo al 100%!")
+        application.run_polling(drop_pending_updates=True)
+    except Exception as e:
+        logging.critical(f"Errore critico nel main: {e}")
+        traceback.print_exc()
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()
