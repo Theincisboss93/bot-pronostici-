@@ -174,10 +174,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         status_vip = "👑 VIP Attivo" if user_info["is_vip"] == 1 else "🔒 Standard (Free)"
 
         welcome_text = (
-            f"🤖 BENVENUTO SU KING PRONOSTICI PRO ⚽\n\n"
-            f"Stato Account: {status_vip}\n"
-            f"Budget (Bankroll): {user_info['bankroll']}€\n\n"
-            "Seleziona un'opzione dal menu sottostante:"
+            f"👑 **KING PRONOSTICI PRO** ⚽\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"👤 **Stato Account:** {status_vip}\n"
+            f"💰 **Bankroll Attuale:** {user_info['bankroll']}€\n"
+            f"━━━━━━━━━━━━━━━━━━━\n\n"
+            "Seleziona un'opzione dal pannello di controllo:"
         )
         
         keyboard = [
@@ -195,7 +197,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         if update.message:
-            await update.message.reply_text(welcome_text, reply_markup=reply_markup)
+            await update.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode="Markdown")
         elif update.callback_query:
             query = update.callback_query
             try:
@@ -203,9 +205,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception:
                 pass
             try:
-                await query.message.edit_text(welcome_text, reply_markup=reply_markup)
+                await query.message.edit_text(welcome_text, reply_markup=reply_markup, parse_mode="Markdown")
             except Exception:
-                await query.message.reply_text(welcome_text, reply_markup=reply_markup)
+                await query.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode="Markdown")
     except Exception as e:
         logging.error(f"Errore in start: {e}")
 
@@ -216,7 +218,7 @@ def valuta_esito_partita(match_obj, tipo_giocata):
     ag = score.get('away', 0) if score.get('away') is not None else 0
     
     if status not in ['FINISHED', 'IN_PLAY', 'PAUSED']:
-        return f"⏳ In Programma ({hg}-{ag})"
+        return f"⏳ [In Programma] ({hg}-{ag})"
 
     total_goals = hg + ag
     if status == 'FINISHED':
@@ -224,19 +226,19 @@ def valuta_esito_partita(match_obj, tipo_giocata):
             try:
                  soglia = float(tipo_giocata.split("Over")[1].split()[0])
                  if total_goals > soglia:
-                     return f"✅ VINTA ({hg}-{ag} FINALE)"
+                     return f"✅ **VINTA** ({hg}-{ag} FINALE)"
                  else:
-                     return f"❌ PERSA ({hg}-{ag} FINALE)"
+                     return f"❌ **PERSA** ({hg}-{ag} FINALE)"
             except Exception:
                 pass
         if "Gol" in tipo_giocata or "Goal" in tipo_giocata:
             if hg > 0 and ag > 0:
-                return f"✅ VINTA ({hg}-{ag} FINALE)"
+                return f"✅ **VINTA** ({hg}-{ag} FINALE)"
             else:
-                return f"❌ PERSA ({hg}-{ag} FINALE)"
-        return f"🏁 Terminata ({hg}-{ag})"
+                return f"❌ **PERSA** ({hg}-{ag} FINALE)"
+        return f"🏁 [Terminata] ({hg}-{ag})"
     else:
-        return f"🔴 LIVE ({hg}-{ag} in corso)"
+        return f"🔴 **LIVE** ({hg}-{ag} in corso)"
 
 async def genera_schedina_singola(tipo, chat_id=1220916735):
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
@@ -259,9 +261,9 @@ async def genera_schedina_singola(tipo, chat_id=1220916735):
             h = m.get('homeTeam', {}).get('name', 'Casa')
             a = m.get('awayTeam', {}).get('name', 'Ospiti')
             stato = valuta_esito_partita(m, tipologia)
-            return f"{h} vs {a} -> **{tipologia}** [{stato}]"
+            return f"• ⚽ `{h} vs {a}`\n  └ 📌 Pronostico: *{tipologia}*\n  └ ⚡ Esito: {stato}"
         else:
-            return f"{fallback_home} vs {fallback_away} -> **{tipologia}** [⏳ In Programma]"
+            return f"• ⚽ `{fallback_home} vs {fallback_away}`\n  └ 📌 Pronostico: *{tipologia}*\n  └ ⚡ Esito: ⏳ [In Programma]"
 
     if tipo == "100":
         m1 = get_match_info(0, "Real Madrid", "Barcellona", "Over 1.5")
@@ -272,15 +274,19 @@ async def genera_schedina_singola(tipo, chat_id=1220916735):
         stake = round(bankroll * 0.05, 2)
         vincita = round(stake * quota_totale, 2)
         return (
-            f"🎯 **SCHEDINA MULTIPLA 100% (Alta Affidabilità) - {oggi_ita}**\n\n"
-            f"1️⃣ ⚽ {m1}\n"
-            f"2️⃣ ⚽ {m2}\n"
-            f"3️⃣ ⚽ {m3}\n"
-            f"4️⃣ ⚽ {p4}\n\n"
-            f"📊 Quota Totale Multipla: **{quota_totale}**\n"
-            f"💰 Puntata Consigliata (5%): **{stake}€**\n"
-            f"🏆 **VINCITA POTENZIALE: {vincita}€**\n\n"
-            "⚠️ _Gioca responsabilmente._"
+            f"🎯 **VIP MASTER MULTIPLA 100%**\n"
+            f"📅 Data Analisi: `{oggi_ita}`\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"{m1}\n\n"
+            f"{m2}\n\n"
+            f"{m3}\n\n"
+            f"{p4}\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"📊 **Quota Totale:** `@{quota_totale}`\n"
+            f"💰 **Stake Consigliato (5%):** `{stake}€`\n"
+            f"🏆 **VINCITA POTENZIALE:** `✨ {vincita}€ ✨`\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"⚠️ _Servizio statistico ad alta affidabilità._"
         )
     elif tipo == "70":
         m1 = get_match_info(4, "Napoli", "Juventus", "Gol / Over 2.5")
@@ -292,16 +298,20 @@ async def genera_schedina_singola(tipo, chat_id=1220916735):
         stake = round(bankroll * 0.04, 2)
         vincita = round(stake * quota_totale, 2)
         return (
-            f"📊 **SCHEDINA MULTIPLA 70% (Alta Probabilità) - {oggi_ita}**\n\n"
-            f"1️⃣ ⚽ {m1}\n"
-            f"2️⃣ ⚽ {m2}\n"
-            f"3️⃣ ⚽ {m3}\n"
-            f"4️⃣ ⚽ {m4}\n"
-            f"5️⃣ ⚽ {m5}\n\n"
-            f"📊 Quota Totale Multipla: **{quota_totale}**\n"
-            f"💰 Puntata Consigliata (4%): **{stake}€**\n"
-            f"🏆 **VINCITA POTENZIALE: {vincita}€**\n\n"
-            "⚠️ _Gioca responsabilmente._"
+            f"📊 **PRO MULTIPLA 70% (ALTA PROBABILITÀ)**\n"
+            f"📅 Data Analisi: `{oggi_ita}`\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"{m1}\n\n"
+            f"{m2}\n\n"
+            f"{m3}\n\n"
+            f"{m4}\n\n"
+            f"{m5}\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"📊 **Quota Totale:** `@{quota_totale}`\n"
+            f"💰 **Stake Consigliato (4%):** `{stake}€`\n"
+            f"🏆 **VINCITA POTENZIALE:** `✨ {vincita}€ ✨`\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"⚠️ _Gestione professionale del bankroll._"
         )
     elif tipo == "50":
         m1 = get_match_info(9, "Porto", "Benfica", "Combo 1X + Goal")
@@ -313,16 +323,20 @@ async def genera_schedina_singola(tipo, chat_id=1220916735):
         stake = round(bankroll * 0.03, 2)
         vincita = round(stake * quota_totale, 2)
         return (
-            f"📈 **SCHEDINA MULTIPLA 50% (Rischio Calcolato) - {oggi_ita}**\n\n"
-            f"1️⃣ ⚽ {m1}\n"
-            f"2️⃣ ⚽ {m2}\n"
-            f"3️⃣ ⚽ {m3}\n"
-            f"4️⃣ ⚽ {m4}\n"
-            f"5️⃣ ⚽ {m5}\n\n"
-            f"📊 Quota Totale Multipla: **{quota_totale}**\n"
-            f"💰 Puntata Consigliata (3%): **{stake}€**\n"
-            f"🏆 **VINCITA POTENZIALE: {vincita}€**\n\n"
-            "⚠️ _Gioca responsabilmente._"
+            f"📈 **EXPERT MULTIPLA 50% (RISCHIO CALCOLATO)**\n"
+            f"📅 Data Analisi: `{oggi_ita}`\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"{m1}\n\n"
+            f"{m2}\n\n"
+            f"{m3}\n\n"
+            f"{m4}\n\n"
+            f"{m5}\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"📊 **Quota Totale:** `@{quota_totale}`\n"
+            f"💰 **Stake Consigliato (3%):** `{stake}€`\n"
+            f"🏆 **VINCITA POTENZIALE:** `🔥 {vincita}€ 🔥`\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"⚠️ _Selezioni avanzate con studio xG._"
         )
     elif tipo == "bomba":
         m1 = get_match_info(2, "Tottenham", "Aston Villa", "Risultato Esatto")
@@ -334,16 +348,20 @@ async def genera_schedina_singola(tipo, chat_id=1220916735):
         stake = round(bankroll * 0.02, 2)
         vincita = round(stake * quota_totale, 2)
         return (
-            f"💣 **BOMBA SCHEDINA MULTIPLA (Quota Pazzesca) - {oggi_ita}**\n\n"
-            f"1️⃣ ⚽ {m1}\n"
-            f"2️⃣ ⚽ {m2}\n"
-            f"3️⃣ ⚽ {m3}\n"
-            f"4️⃣ ⚽ {m4}\n"
-            f"5️⃣ ⚽ {m5}\n\n"
-            f"📊 Quota Totale Multipla: **{quota_totale}**\n"
-            f"💰 Puntata Consigliata (2% - Prudente): **{stake}€**\n"
-            f"🏆 **VINCITA POTENZIALE CONSISTENTE: {vincita}€**\n\n"
-            "⚠️ _Gioca responsabilmente._"
+            f"💣 **SUPER BOMBA MULTIPLA (QUOTA PAZZESCA)**\n"
+            f"📅 Data Analisi: `{oggi_ita}`\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"{m1}\n\n"
+            f"{m2}\n\n"
+            f"{m3}\n\n"
+            f"{m4}\n\n"
+            f"{m5}\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"📊 **Quota Totale:** `@{quota_totale}`\n"
+            f"💰 **Stake Consigliato (2% - Prudente):** `{stake}€`\n"
+            f"🏆 **VINCITA POTENZIALE CONSISTENTE:** `🚀 {vincita}€ 🚀`\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"⚠️ _Tentativo a quota alta, puntare il minimo._"
         )
     return "Seleziona una schedina valida."
 
@@ -367,17 +385,17 @@ async def genera_testo_partite_oggi():
                 ag = score.get('away', 0) if score.get('away') is not None else 0
                 
                 if status == 'FINISHED':
-                    stato_str = f"🏁 Terminata ({hg} - {ag})"
+                    stato_str = f"🏁 [Terminata] ({hg} - {ag})"
                 elif status in ['IN_PLAY', 'PAUSED']:
-                    stato_str = f"🔴 LIVE in corso ({hg} - {ag})"
+                    stato_str = f"🔴 **LIVE IN CORSO** ({hg} - {ag})"
                 else:
-                    stato_str = "⏳ Programmata"
+                    stato_str = "⏳ [Programmata]"
                     
-                partite_list.append(f"🏆 {comp}\n⚽ {home} vs {away}\n📌 Stato: {stato_str}\n-----------------------------------")
+                partite_list.append(f"🏆 `{comp}`\n⚽ **{home} vs {away}**\n📌 Stato: {stato_str}\n───────────────────────────")
     except Exception as e:
         logging.error(f"Errore recupero tutte le partite: {e}")
 
-    testo = f"📅 TUTTE LE PARTITE DEL GIORNO ({oggi_ita})\n\n"
+    testo = f"📅 **CALENDARIO COMPLETO MATCH ({oggi_ita})**\n━━━━━━━━━━━━━━━━━━━\n\n"
     if partite_list:
         testo += "\n".join(partite_list)
     else:
@@ -404,10 +422,11 @@ async def genera_testo_live():
                     ag = score.get('away', 0)
                     
                     segnali_live.append(
-                        f"🔴 **SEGNALE LIVE DA GIOCARE!** ({comp})\n"
-                        f"⚽ {home} {hg} - {ag} {away}\n"
-                        f"💡 **Consiglio Live:** Valutare Over 0.5 / 1.5 o Gol in base all'andamento in campo.\n"
-                        f"-----------------------------------\n"
+                        f"🔴 **SEGNALE LIVE CALDO!**\n"
+                        f"🏆 `{comp}`\n"
+                        f"⚽ **{home} {hg} - {ag} {away}**\n"
+                        f"💡 _Consiglio:_ Valutare Over in live o Goal in base al pressing.\n"
+                        f"───────────────────────────"
                     )
     except Exception as e:
         logging.error(f"Errore Live: {e}")
@@ -415,7 +434,7 @@ async def genera_testo_live():
     if not segnali_live:
         segnali_live.append("Nessuna partita in corso con segnali live attivi in questo momento.")
 
-    return f"🚨 MONITORAGGIO MATCH LIVE ({oggi_ita}) 🚨\n\n" + "\n".join(segnali_live)
+    return f"🚨 **RADAR MONITORAGGIO LIVE ({oggi_ita})** 🚨\n━━━━━━━━━━━━━━━━━━━\n\n" + "\n".join(segnali_live)
 
 def background_live_notifier(bot_app):
     import asyncio
@@ -435,17 +454,16 @@ def background_live_notifier(bot_app):
                         ag = score.get('away', 0)
                         
                         notif_text = (
-                            f"🚨 **NOTIFICA LIVE: COSA SCOMMETTERE ORA!** 🚨\n\n"
+                            f"🚨 **NOTIFICA LIVE: OCCASIONE DA GOL!** 🚨\n\n"
                             f"⚽ **{home} {hg} - {ag} {away}**\n"
-                            f"🔥 Match caldo in corso! Ottima occasione per puntare in live.\n"
-                            f"Controlla le quote sul tuo bookmaker!"
+                            f"🔥 Match caldissimo! Apri il tuo bookmaker e valuta una giocata live.\n"
                         )
                         
                         utenti = get_all_users()
                         for uid in utenti:
                             try:
                                 asyncio.run_coroutine_threadsafe(
-                                    bot_app.bot.send_message(chat_id=uid, text=notif_text),
+                                    bot_app.bot.send_message(chat_id=uid, text=notif_text, parse_mode="Markdown"),
                                     bot_app.loop
                                 )
                             except Exception:
@@ -456,12 +474,13 @@ def background_live_notifier(bot_app):
 
 async def genera_testo_fonti():
     return (
-        "🔍 **SITI E FONTI DI ANALISI PROFESSIONALE** 📊\n\n"
-        "1. **FBref** (Statistiche avanzate e xG): https://fbref.com/\n"
-        "2. **Understat** (Expected Goals): https://understat.com/\n"
-        "3. **WhoScored**: https://it.whoscored.com/\n"
-        "4. **Transfermarkt**: https://www.transfermarkt.it/\n"
-        "5. **Sofascore**: https://www.sofascore.com/it/"
+        "🔍 **FONTI DI ANALISI STATISTICA (xG)**\n"
+        "━━━━━━━━━━━━━━━━━━━\n"
+        "1. **FBref** (Metriche avanzate): `https://fbref.com/`\n"
+        "2. **Understat** (Expected Goals): `https://understat.com/`\n"
+        "3. **WhoScored** (Heatmap & Rating): `https://it.whoscored.com/`\n"
+        "4. **Transfermarkt** (Valori di mercato): `https://www.transfermarkt.it/`\n"
+        "5. **Sofascore** (Copertura live): `https://www.sofascore.com/it/`"
     )
 
 async def mostra_bankroll_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -480,18 +499,19 @@ async def mostra_bankroll_menu(update: Update, context: ContextTypes.DEFAULT_TYP
         stake_2 = round(bank * 0.05, 2)
         
         testo = (
-            f"📊 **GESTIONE DEL BANKROLL**\n\n"
-            f"💰 Budget attuale: **{bank}€**\n"
-            f"• Puntata Prudente (2%): **{stake_1}€**\n"
-            f"• Puntata Standard (5%): **{stake_2}€**\n\n"
-            "Usa /setbankroll <valore> per aggiornare il budget."
+            f"📊 **GESTIONE BANKROLL & STAKE**\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"💰 **Budget Attuale:** `{bank}€`\n\n"
+            f"• 🛡️ Puntata Prudente (2%): `{stake_1}€`\n"
+            f"• ⚖️ Puntata Standard (5%): `{stake_2}€`\n\n"
+            "Usa `/setbankroll <valore>` per aggiornare il budget."
         )
         keyboard = [[InlineKeyboardButton("Torna al Menu Principale", callback_data="btn_menu")]]
         
         try:
-            await query.message.edit_text(testo, reply_markup=InlineKeyboardMarkup(keyboard))
+            await query.message.edit_text(testo, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
         except Exception:
-            await query.message.reply_text(testo, reply_markup=InlineKeyboardMarkup(keyboard))
+            await query.message.reply_text(testo, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
     except Exception as e:
         logging.error(f"Errore bankroll menu: {e}")
 
@@ -501,11 +521,11 @@ async def set_bankroll_command(update: Update, context: ContextTypes.DEFAULT_TYP
         if context.args:
             valore = float(context.args[0])
             update_user_bankroll(chat_id, valore)
-            await update.message.reply_text(f"✅ Bankroll aggiornato a {valore}€!")
+            await update.message.reply_text(f"✅ Bankroll aggiornato con successo a `{valore}€`!", parse_mode="Markdown")
         else:
-            await update.message.reply_text("⚠️ Specifica il valore. Esempio: /setbankroll 150")
+            await update.message.reply_text("⚠️ Specifica il valore. Esempio: `/setbankroll 150`", parse_mode="Markdown")
     except ValueError:
-        await update.message.reply_text("❌ Valore non valido. Usa es: /setbankroll 150")
+        await update.message.reply_text("❌ Valore non valido. Usa es: `/setbankroll 150`", parse_mode="Markdown")
 
 async def mostra_info_vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -516,11 +536,12 @@ async def mostra_info_vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         
         testo = (
-            "💎 **AREA ABBONAMENTO VIP / SERVIZIO**\n\n"
-            "• Abbonamento Mensile: 19.99€\n"
-            "• Abbonamento Annuale: 99.00€\n\n"
-            "🔄 **Come pagare:**\n"
-            "1. Contatta direttamente l'amministratore per concordare il pagamento.\n"
+            "💎 **AREA ABBONAMENTO VIP EXCLUSIVE**\n"
+            "━━━━━━━━━━━━━━━━━━━\n"
+            "• Abbonamento Mensile: `19.99€`\n"
+            "• Abbonamento Annuale: `99.00€`\n\n"
+            "🔄 **Procedura di Attivazione:**\n"
+            "1. Contatta l'amministratore per concordare il pagamento.\n"
             "2. Invia la ricevuta in chat: verrai abilitato immediatamente e riceverai il link d'invito al canale VIP!"
         )
         keyboard = [
@@ -528,9 +549,9 @@ async def mostra_info_vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("Torna al Menu Principale", callback_data="btn_menu")]
         ]
         try:
-            await query.message.edit_text(testo, reply_markup=InlineKeyboardMarkup(keyboard))
+            await query.message.edit_text(testo, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
         except Exception:
-            await query.message.reply_text(testo, reply_markup=InlineKeyboardMarkup(keyboard))
+            await query.message.reply_text(testo, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
     except Exception as e:
         logging.error(f"Errore info vip: {e}")
 
@@ -540,14 +561,15 @@ async def admin_panel_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
     
     testo = (
-        "👑 **PANNELLO DI CONTROLLO ADMIN** 👑\n\n"
+        "👑 **PANNELLO DI CONTROLLO ADMIN** 👑\n"
+        "━━━━━━━━━━━━━━━━━━━\n"
         "Comandi disponibili:\n"
         "• `/setvip <chat_id> <giorni>` -> Attiva VIP a tempo.\n"
         "• `/givevip <chat_id>` -> Attiva VIP illimitato gratuito.\n"
-        "• `/broadcast <messaggio>` -> Invia un messaggio a tutti gli utenti del bot.\n"
+        "• `/broadcast <messaggio>` -> Invia un broadcast a tutti gli utenti.\n"
         "• `/setbankroll <valore>` -> Modifica il bankroll."
     )
-    await update.message.reply_text(testo)
+    await update.message.reply_text(testo, parse_mode="Markdown")
 
 async def setvip_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id != ADMIN_CHAT_ID:
@@ -560,15 +582,15 @@ async def setvip_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             giorni = int(context.args[1])
             expiry_dt = datetime.now() + timedelta(days=giorni)
             set_user_vip_db(target_id, 1, expiry_dt)
-            await update.message.reply_text(f"✅ Utente {target_id} impostato VIP per {giorni} giorni!")
+            await update.message.reply_text(f"✅ Utente `{target_id}` impostato VIP per `{giorni}` giorni!", parse_mode="Markdown")
             try:
-                await context.bot.send_message(chat_id=target_id, text="🎉 Abbonamento VIP attivato! Usa /start per avere il link d'invito.")
+                await context.bot.send_message(chat_id=target_id, text="🎉 Abbonamento VIP attivato! Usa /start per ottenere il link d'invito.")
             except Exception:
                 pass
         except ValueError:
-            await update.message.reply_text("❌ Usa: /setvip <chat_id> <giorni>")
+            await update.message.reply_text("❌ Usa: `/setvip <chat_id> <giorni>`", parse_mode="Markdown")
     else:
-        await update.message.reply_text("⚠️ Usa: /setvip <chat_id> <giorni>")
+        await update.message.reply_text("⚠️ Usa: `/setvip <chat_id> <giorni>`", parse_mode="Markdown")
 
 async def givevip_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id != ADMIN_CHAT_ID:
@@ -579,15 +601,15 @@ async def givevip_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             target_id = int(context.args[0])
             set_user_vip_db(target_id, 1, None)
-            await update.message.reply_text(f"✅ Accesso VIP gratuito illimitato concesso all'utente {target_id}!")
+            await update.message.reply_text(f"✅ Accesso VIP gratuito illimitato concesso all'utente `{target_id}`!", parse_mode="Markdown")
             try:
                 await context.bot.send_message(chat_id=target_id, text="🎉 Ti è stato concesso l'accesso VIP gratuito illimitato! Usa /start per ottenere il link d'invito.")
             except Exception:
                 pass
         except ValueError:
-            await update.message.reply_text("❌ ID non valido. Usa: /givevip <chat_id>")
+            await update.message.reply_text("❌ ID non valido. Usa: `/givevip <chat_id>`", parse_mode="Markdown")
     else:
-        await update.message.reply_text("⚠️ Specifica l'ID. Esempio: /givevip 123456789")
+        await update.message.reply_text("⚠️ Specifica l'ID. Esempio: `/givevip 123456789`", parse_mode="Markdown")
 
 async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id != ADMIN_CHAT_ID:
@@ -596,18 +618,18 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     msg = " ".join(context.args)
     if not msg:
-        await update.message.reply_text("⚠️ Usa: /broadcast <messaggio>")
+        await update.message.reply_text("⚠️ Usa: `/broadcast <messaggio>`", parse_mode="Markdown")
         return
 
     utenti = get_all_users()
     inviati = 0
     for uid in utenti:
         try:
-            await context.bot.send_message(chat_id=uid, text=f"📢 {msg}")
+            await context.bot.send_message(chat_id=uid, text=f"📢 **COMUNICAZIONE UFFICIALE:**\n\n{msg}", parse_mode="Markdown")
             inviati += 1
         except Exception:
             pass
-    await update.message.reply_text(f"✅ Broadcast inviato a {inviati} utenti.")
+    await update.message.reply_text(f"✅ Broadcast inviato con successo a `{inviati}` utenti.", parse_mode="Markdown")
 
 async def termini_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
@@ -631,7 +653,7 @@ async def get_invite_link_handler(update: Update, context: ContextTypes.DEFAULT_
                     member_limit=1, 
                     expire_date=datetime.now() + timedelta(hours=24)
                 )
-                testo = f"🎉 Ecco il tuo link d'invito monouso:\n\n{link.invite_link}\n\n⚠️ Il link scade in 24 ore ed è utilizzabile una sola volta."
+                testo = f"🎉 **Link d'invito monouso generato:**\n\n`{link.invite_link}`\n\n⚠️ Il link scade in 24 ore ed è utilizzabile una sola volta."
             except Exception as e:
                 logging.error(f"Errore creazione link canale: {e}")
                 testo = "⚠️ Errore generazione link. Verifica che il bot sia amministratore del canale privato."
@@ -640,9 +662,9 @@ async def get_invite_link_handler(update: Update, context: ContextTypes.DEFAULT_
 
         keyboard = [[InlineKeyboardButton("Torna al Menu Principale", callback_data="btn_menu")]]
         try:
-            await query.message.edit_text(text=testo, reply_markup=InlineKeyboardMarkup(keyboard), disable_web_page_preview=True)
+            await query.message.edit_text(text=testo, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown", disable_web_page_preview=True)
         except Exception:
-            await query.message.reply_text(text=testo, reply_markup=InlineKeyboardMarkup(keyboard))
+            await query.message.reply_text(text=testo, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
     except Exception as e:
         logging.error(f"Errore get invite link: {e}")
 
@@ -655,19 +677,19 @@ async def chat_assistant_handler(update: Update, context: ContextTypes.DEFAULT_T
         chat_id = update.effective_chat.id
         if "100" in testo:
             risposta = await genera_schedina_singola("100", chat_id)
-            await update.message.reply_text(risposta)
+            await update.message.reply_text(risposta, parse_mode="Markdown")
         elif "70" in testo:
             risposta = await genera_schedina_singola("70", chat_id)
-            await update.message.reply_text(risposta)
+            await update.message.reply_text(risposta, parse_mode="Markdown")
         elif "50" in testo:
             risposta = await genera_schedina_singola("50", chat_id)
-            await update.message.reply_text(risposta)
+            await update.message.reply_text(risposta, parse_mode="Markdown")
         elif "bomba" in testo or "schedina" in testo:
             risposta = await genera_schedina_singola("bomba", chat_id)
-            await update.message.reply_text(risposta)
+            await update.message.reply_text(risposta, parse_mode="Markdown")
         elif "live" in testo or "partite" in testo:
             risposta = await genera_testo_partite_oggi()
-            await update.message.reply_text(risposta)
+            await update.message.reply_text(risposta, parse_mode="Markdown")
         else:
             await update.message.reply_text("🤖 Usa /start per aprire il menu principale.")
     except Exception as e:
@@ -686,27 +708,27 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             tipo_map = {"btn_schedina_100": "100", "btn_schedina_70": "70", "btn_schedina_50": "50", "btn_schedina_bomba": "bomba"}
             text = await genera_schedina_singola(tipo_map[query.data], chat_id)
             try:
-                await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
+                await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]), parse_mode="Markdown")
             except Exception:
-                await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
+                await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]), parse_mode="Markdown")
         elif query.data == "btn_partite_oggi":
             text = await genera_testo_partite_oggi()
             try:
-                await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
+                await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]), parse_mode="Markdown")
             except Exception:
-                await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
+                await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]), parse_mode="Markdown")
         elif query.data == "btn_live_radar":
             text = await genera_testo_live()
             try:
-                await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
+                await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]), parse_mode="Markdown")
             except Exception:
-                await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
+                await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]), parse_mode="Markdown")
         elif query.data == "btn_fonti_analisi":
             text = await genera_testo_fonti()
             try:
-                await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]), disable_web_page_preview=True)
+                await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]), parse_mode="Markdown", disable_web_page_preview=True)
             except Exception:
-                await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]), disable_web_page_preview=True)
+                await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]), parse_mode="Markdown", disable_web_page_preview=True)
         elif query.data == "btn_bankroll":
             await mostra_bankroll_menu(update, context)
         elif query.data == "btn_vip":
