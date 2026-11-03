@@ -256,34 +256,4 @@ async def genera_testo_partite_oggi():
     try:
         data = fetch_from_football_api(url)
         if data and "matches" in data:
-            for match in data.get("matches", [])[:10]:
-                home = match.get('homeTeam', {}).get('name', 'Casa')
-                away = match.get('awayTeam', {}).get('name', 'Ospiti')
-                comp = match.get('competition', {}).get('name', 'Campionato')
-                status = match.get('status', 'SCHEDULED')
-                
-                score = match.get('score', {}).get('fullTime', {})
-                hg = score.get('home', 0) if score.get('home') is not None else 0
-                ag = score.get('away', 0) if score.get('away') is not None else 0
-                
-                if status == 'FINISHED':
-                    stato_str = f"🏁 Terminata ({hg} - {ag})"
-                elif status in ['IN_PLAY', 'PAUSED']:
-                    stato_str = f"🔴 LIVE ({hg} - {ag})"
-                else:
-                    stato_str = "⏳ Programmata"
-                    
-                partite_list.append(f"🏆 {comp}\n⚽ {home} vs {away}\n📌 Stato: {stato_str}\n-----------------------------------")
-    except Exception as e:
-        logging.error(f"Errore recupero partite: {e}")
-
-    testo = f"📅 PARTITE DEL GIORNO ({oggi_ita})\n\n"
-    if partite_list:
-        testo += "\n".join(partite_list)
-    else:
-        testo += "Nessuna partita disponibile per la data odierna."
-    
-    return testo
-
-# --- MONITORAGGIO LIVE ---
-async def genera_
+            for match in data.
