@@ -29,7 +29,6 @@ FOOTBALL_API_KEYS = [
 
 ADMIN_USERNAME = "Theincisboss" 
 ADMIN_CHAT_ID = 1220916735  
-
 CHANNEL_PRIVATO = "@KingPronosticiVIP"
 
 def init_db():
@@ -554,7 +553,7 @@ def main():
         application = ApplicationBuilder().token(TOKEN).build()
         
         application.add_handler(CommandHandler("start", start))
-        application.add_handler(CommandHandler("setbankroll", setbankroll_command))
+        application.add_handler(CommandHandler("setbankroll", set_bankroll_command))
         application.add_handler(CommandHandler("setvip", setvip_command))
         application.add_handler(CommandHandler("givevip", givevip_command))
         application.add_handler(CommandHandler("broadcast", broadcast_command))
