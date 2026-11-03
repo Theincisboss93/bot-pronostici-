@@ -143,7 +143,6 @@ def fetch_from_football_api(endpoint_url):
                 return res
     return None
 
-# --- WEB SERVER PER RENDER (KEEP-ALIVE) ---
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -181,8 +180,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         
         keyboard = [
-            [InlineKeyboardButton("🎯 Schedina 100%", callback_data="btn_schedina_100"), InlineKeyboardButton("📊 Schedina 70%", callback_data="btn_schedina_70")],
-            [InlineKeyboardButton("📈 Schedina 50%", callback_data="btn_schedina_50"), InlineKeyboardButton("💣 Bomba Schedina", callback_data="btn_schedina_bomba")],
+            [InlineKeyboardButton("🎯 Schedina 100% (Multipla)", callback_data="btn_schedina_100"), InlineKeyboardButton("📊 Schedina 70% (Multipla)", callback_data="btn_schedina_70")],
+            [InlineKeyboardButton("📈 Schedina 50% (Multipla)", callback_data="btn_schedina_50"), InlineKeyboardButton("💣 Bomba Schedina (Multipla)", callback_data="btn_schedina_bomba")],
             [InlineKeyboardButton("📅 Partite e Risultati Oggi", callback_data="btn_partite_oggi")],
             [InlineKeyboardButton("🔴 Monitoraggio LIVE", callback_data="btn_live_radar")],
             [InlineKeyboardButton("📊 Gestione Bankroll & Stake", callback_data="btn_bankroll")],
@@ -209,7 +208,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logging.error(f"Errore in start: {e}")
 
-# --- 4 SCHEDINE SEPARATE E DISTINTE ---
+# --- 4 SCHEDINE MULTIPLE SEPARATE (CON PIÙ PARTITE E VINCITE CONSISTENTI) ---
 async def genera_schedina_singola(tipo, chat_id=1220916735):
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
     url = f"https://api.football-data.org/v4/matches?date={datetime.now().strftime('%Y-%m-%d')}"
@@ -225,63 +224,73 @@ async def genera_schedina_singola(tipo, chat_id=1220916735):
     except Exception:
         pass
 
+    while len(match_trovati) < 12:
+        match_trovati.append(f"Match di cartello #{len(match_trovati)+1}")
+
     u_data = get_user_data(chat_id)
     bankroll = u_data["bankroll"]
 
     if tipo == "100":
-        m = match_trovati[0] if len(match_trovati) > 0 else "Real Madrid vs Barcellona"
-        quota = 1.35
+        p1, p2, p3 = match_trovati[0], match_trovati[1], match_trovati[2]
+        quota_totale = 2.55
         stake = round(bankroll * 0.05, 2)
-        vincita = round(stake * quota, 2)
+        vincita = round(stake * quota_totale, 2)
         return (
-            f"🎯 **SCHEDINA 100% (Affidabilità Massima) - {oggi_ita}**\n\n"
-            f"⚽ Partita: **{m}**\n"
-            f"📌 Giocata consigliata: **Over 1.5 / Segna Goal**\n"
-            f"📊 Quota: **{quota}**\n"
-            f"💰 Puntata consigliata (5%): **{stake}€**\n"
-            f"🏆 Vincita potenziale: **{vincita}€**\n\n"
+            f"🎯 **SCHEDINA MULTIPLA 100% (Alta Affidabilità) - {oggi_ita}**\n\n"
+            f"1️⃣ ⚽ {p1} -> **Over 1.5**\n"
+            f"2️⃣ ⚽ {p2} -> **Segna Goal**\n"
+            f"3️⃣ ⚽ {p3} -> **1X**\n\n"
+            f"📊 Quota Totale Multipla: **{quota_totale}**\n"
+            f"💰 Puntata Consigliata (5%): **{stake}€**\n"
+            f"🏆 **VINCITA POTENZIALE: {vincita}€**\n\n"
             "⚠️ _Gioca responsabilmente._"
         )
     elif tipo == "70":
-        m = match_trovati[1] if len(match_trovati) > 1 else "Inter vs Milan"
-        quota = 1.70
+        p1, p2, p3, p4 = match_trovati[3], match_trovati[4], match_trovati[5], match_trovati[6]
+        quota_totale = 5.20
         stake = round(bankroll * 0.04, 2)
-        vincita = round(stake * quota, 2)
+        vincita = round(stake * quota_totale, 2)
         return (
-            f"📊 **SCHEDINA 70% (Alta Probabilità) - {oggi_ita}**\n\n"
-            f"⚽ Partita: **{m}**\n"
-            f"📌 Giocata consigliata: **Gol / Over 2.5**\n"
-            f"📊 Quota: **{quota}**\n"
-            f"💰 Puntata consigliata (4%): **{stake}€**\n"
-            f"🏆 Vincita potenziale: **{vincita}€**\n\n"
+            f"📊 **SCHEDINA MULTIPLA 70% (Alta Probabilità) - {oggi_ita}**\n\n"
+            f"1️⃣ ⚽ {p1} -> **Gol / Over 2.5**\n"
+            f"2️⃣ ⚽ {p2} -> **1X + Over 1.5**\n"
+            f"3️⃣ ⚽ {p3} -> **Over 1.5**\n"
+            f"4️⃣ ⚽ {p4} -> **Gol**\n\n"
+            f"📊 Quota Totale Multipla: **{quota_totale}**\n"
+            f"💰 Puntata Consigliata (4%): **{stake}€**\n"
+            f"🏆 **VINCITA POTENZIALE: {vincita}€**\n\n"
             "⚠️ _Gioca responsabilmente._"
         )
     elif tipo == "50":
-        m = match_trovati[2] if len(match_trovati) > 2 else "Manchester City vs Arsenal"
-        quota = 2.10
+        p1, p2, p3, p4 = match_trovati[7], match_trovati[8], match_trovati[9], match_trovati[10]
+        quota_totale = 12.50
         stake = round(bankroll * 0.03, 2)
-        vincita = round(stake * quota, 2)
+        vincita = round(stake * quota_totale, 2)
         return (
-            f"📈 **SCHEDINA 50% (Rischio Calcolato) - {oggi_ita}**\n\n"
-            f"⚽ Partita: **{m}**\n"
-            f"📌 Giocata consigliata: **1X + Over 1.5**\n"
-            f"📊 Quota: **{quota}**\n"
-            f"💰 Puntata consigliata (3%): **{stake}€**\n"
-            f"🏆 Vincita potenziale: **{vincita}€**\n\n"
+            f"📈 **SCHEDINA MULTIPLA 50% (Rischio Calcolato) - {oggi_ita}**\n\n"
+            f"1️⃣ ⚽ {p1} -> **1 2T / Combo**\n"
+            f"2️⃣ ⚽ {p2} -> **Over 2.5**\n"
+            f"3️⃣ ⚽ {p3} -> **Gol + Over 1.5**\n"
+            f"4️⃣ ⚽ {p4} -> **X2 + Over 1.5**\n\n"
+            f"📊 Quota Totale Multipla: **{quota_totale}**\n"
+            f"💰 Puntata Consigliata (3%): **{stake}€**\n"
+            f"🏆 **VINCITA POTENZIALE: {vincita}€**\n\n"
             "⚠️ _Gioca responsabilmente._"
         )
     elif tipo == "bomba":
-        m = match_trovati[3] if len(match_trovati) > 3 else "Bayern Monaco vs Dortmund"
-        quota = 4.50
+        p1, p2, p3, p4 = match_trovati[11], match_trovati[0], match_trovati[3], match_trovati[5]
+        quota_totale = 35.00
         stake = round(bankroll * 0.02, 2)
-        vincita = round(stake * quota, 2)
+        vincita = round(stake * quota_totale, 2)
         return (
-            f"💣 **BOMBA SCHEDINA (Quota Alta) - {oggi_ita}**\n\n"
-            f"⚽ Partita: **{m}**\n"
-            f"📌 Giocata consigliata: **Risultato Esatto / Combo**\n"
-            f"📊 Quota: **{quota}**\n"
-            f"💰 Puntata consigliata (2% - Prudente): **{stake}€**\n"
-            f"🏆 Vincita potenziale: **{vincita}€**\n\n"
+            f"💣 **BOMBA SCHEDINA MULTIPLA (Quota Pazzesca) - {oggi_ita}**\n\n"
+            f"1️⃣ ⚽ {p1} -> **Risultato Esatto / Combo**\n"
+            f"2️⃣ ⚽ {p2} -> **X Primo Tempo**\n"
+            f"3️⃣ ⚽ {p3} -> **Multigol 2-3**\n"
+            f"4️⃣ ⚽ {p4} -> **Ribaltone / Gol Gol**\n\n"
+            f"📊 Quota Totale Multipla: **{quota_totale}**\n"
+            f"💰 Puntata Consigliata (2% - Prudente): **{stake}€**\n"
+            f"🏆 **VINCITA POTENZIALE CONSISTENTE: {vincita}€**\n\n"
             "⚠️ _Gioca responsabilmente._"
         )
     return "Seleziona una schedina valida."
@@ -356,12 +365,11 @@ async def genera_testo_live():
 
     return f"🚨 MONITORAGGIO MATCH LIVE ({oggi_ita}) 🚨\n\n" + "\n".join(segnali_live)
 
-# --- NOTIFICHE LIVE AUTOMATICHE IN THREAD SEPARATO ---
 def background_live_notifier(bot_app):
     import asyncio
     while True:
         try:
-            time.sleep(900) # Controlla ogni 15 minuti
+            time.sleep(900)
             oggi = datetime.now().strftime('%Y-%m-%d')
             url = f"https://api.football-data.org/v4/matches?date={oggi}"
             data = fetch_from_football_api(url)
@@ -431,261 +439,3 @@ async def mostra_bankroll_menu(update: Update, context: ContextTypes.DEFAULT_TYP
         try:
             await query.message.edit_text(testo, reply_markup=InlineKeyboardMarkup(keyboard))
         except Exception:
-            await query.message.reply_text(testo, reply_markup=InlineKeyboardMarkup(keyboard))
-    except Exception as e:
-        logging.error(f"Errore bankroll menu: {e}")
-
-async def set_bankroll_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        chat_id = update.effective_chat.id
-        if context.args:
-            valore = float(context.args[0])
-            update_user_bankroll(chat_id, valore)
-            await update.message.reply_text(f"✅ Bankroll aggiornato a {valore}€!")
-        else:
-            await update.message.reply_text("⚠️ Specifica il valore. Esempio: /setbankroll 150")
-    except ValueError:
-        await update.message.reply_text("❌ Valore non valido. Usa es: /setbankroll 150")
-
-async def mostra_info_vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        query = update.callback_query
-        try:
-            await query.answer()
-        except Exception:
-            pass
-        
-        testo = (
-            "💎 **AREA ABBONAMENTO VIP / SERVIZIO**\n\n"
-            "• Abbonamento Mensile: 19.99€\n"
-            "• Abbonamento Annuale: 99.00€\n\n"
-            "🔄 **Come pagare:**\n"
-            "1. Contatta direttamente l'amministratore per concordare il pagamento.\n"
-            "2. Invia la ricevuta in chat: verrai abilitato immediatamente e riceverai il link d'invito al canale VIP!"
-        )
-        keyboard = [
-            [InlineKeyboardButton("✉️ Contatta Admin per Pagare", url=f"https://t.me/{ADMIN_USERNAME}")],
-            [InlineKeyboardButton("Torna al Menu Principale", callback_data="btn_menu")]
-        ]
-        try:
-            await query.message.edit_text(testo, reply_markup=InlineKeyboardMarkup(keyboard))
-        except Exception:
-            await query.message.reply_text(testo, reply_markup=InlineKeyboardMarkup(keyboard))
-    except Exception as e:
-        logging.error(f"Errore info vip: {e}")
-
-async def admin_panel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_chat.id != ADMIN_CHAT_ID:
-        await update.message.reply_text("❌ Non autorizzato.")
-        return
-    
-    testo = (
-        "👑 **PANNELLO DI CONTROLLO ADMIN** 👑\n\n"
-        "Comandi disponibili:\n"
-        "• `/setvip <chat_id> <giorni>` -> Attiva VIP a tempo.\n"
-        "• `/givevip <chat_id>` -> Attiva VIP illimitato gratuito.\n"
-        "• `/broadcast <messaggio>` -> Invia un messaggio a tutti gli utenti del bot.\n"
-        "• `/setbankroll <valore>` -> Modifica il bankroll."
-    )
-    await update.message.reply_text(testo)
-
-async def setvip_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_chat.id != ADMIN_CHAT_ID:
-        await update.message.reply_text("❌ Non autorizzato.")
-        return
-
-    if len(context.args) >= 2:
-        try:
-            target_id = int(context.args[0])
-            giorni = int(context.args[1])
-            expiry_dt = datetime.now() + timedelta(days=giorni)
-            set_user_vip_db(target_id, 1, expiry_dt)
-            await update.message.reply_text(f"✅ Utente {target_id} impostato VIP per {giorni} giorni!")
-            try:
-                await context.bot.send_message(chat_id=target_id, text="🎉 Abbonamento VIP attivato! Usa /start per avere il link d'invito.")
-            except Exception:
-                pass
-        except ValueError:
-            await update.message.reply_text("❌ Usa: /setvip <chat_id> <giorni>")
-    else:
-        await update.message.reply_text("⚠️ Usa: /setvip <chat_id> <giorni>")
-
-async def givevip_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_chat.id != ADMIN_CHAT_ID:
-        await update.message.reply_text("❌ Non autorizzato.")
-        return
-
-    if len(context.args) >= 1:
-        try:
-            target_id = int(context.args[0])
-            set_user_vip_db(target_id, 1, None)
-            await update.message.reply_text(f"✅ Accesso VIP gratuito illimitato concesso all'utente {target_id}!")
-            try:
-                await context.bot.send_message(chat_id=target_id, text="🎉 Ti è stato concesso l'accesso VIP gratuito illimitato! Usa /start per ottenere il link d'invito.")
-            except Exception:
-                pass
-        except ValueError:
-            await update.message.reply_text("❌ ID non valido. Usa: /givevip <chat_id>")
-    else:
-        await update.message.reply_text("⚠️ Specifica l'ID. Esempio: /givevip 123456789")
-
-async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_chat.id != ADMIN_CHAT_ID:
-        await update.message.reply_text("❌ Non autorizzato.")
-        return
-
-    msg = " ".join(context.args)
-    if not msg:
-        await update.message.reply_text("⚠️ Usa: /broadcast <messaggio>")
-        return
-
-    utenti = get_all_users()
-    inviati = 0
-    for uid in utenti:
-        try:
-            await context.bot.send_message(chat_id=uid, text=f"📢 {msg}")
-            inviati += 1
-        except Exception:
-            pass
-    await update.message.reply_text(f"✅ Broadcast inviato a {inviati} utenti.")
-
-async def termini_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message:
-        await update.message.reply_text("📜 Servizio puramente statistico e di intrattenimento. Gioco vietato ai minori.")
-
-async def get_invite_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        query = update.callback_query
-        try:
-            await query.answer()
-        except Exception:
-            pass
-        
-        chat_id = query.message.chat_id
-        user_info = get_user_data(chat_id)
-        
-        if user_info["is_vip"] == 1:
-            try:
-                link = await context.bot.create_chat_invite_link(
-                    chat_id=CHANNEL_PRIVATO, 
-                    member_limit=1, 
-                    expire_date=datetime.now() + timedelta(hours=24)
-                )
-                testo = f"🎉 Ecco il tuo link d'invito monouso:\n\n{link.invite_link}\n\n⚠️ Il link scade in 24 ore ed è utilizzabile una sola volta."
-            except Exception as e:
-                logging.error(f"Errore creazione link canale: {e}")
-                testo = "⚠️ Errore generazione link. Verifica che il bot sia amministratore del canale privato."
-        else:
-            testo = "🔒 Non sei un utente VIP."
-
-        keyboard = [[InlineKeyboardButton("Torna al Menu Principale", callback_data="btn_menu")]]
-        try:
-            await query.message.edit_text(text=testo, reply_markup=InlineKeyboardMarkup(keyboard), disable_web_page_preview=True)
-        except Exception:
-            await query.message.reply_text(text=testo, reply_markup=InlineKeyboardMarkup(keyboard))
-    except Exception as e:
-        logging.error(f"Errore get invite link: {e}")
-
-async def chat_assistant_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        if not update.message or not update.message.text:
-            return
-
-        testo = update.message.text.lower()
-        chat_id = update.effective_chat.id
-        if "100" in testo:
-            risposta = await genera_schedina_singola("100", chat_id)
-            await update.message.reply_text(risposta)
-        elif "70" in testo:
-            risposta = await genera_schedina_singola("70", chat_id)
-            await update.message.reply_text(risposta)
-        elif "50" in testo:
-            risposta = await genera_schedina_singola("50", chat_id)
-            await update.message.reply_text(risposta)
-        elif "bomba" in testo or "schedina" in testo:
-            risposta = await genera_schedina_singola("bomba", chat_id)
-            await update.message.reply_text(risposta)
-        elif "live" in testo or "partite" in testo:
-            risposta = await genera_testo_partite_oggi()
-            await update.message.reply_text(risposta)
-        else:
-            await update.message.reply_text("🤖 Usa /start per aprire il menu principale.")
-    except Exception as e:
-        logging.error(f"Errore chat_assistant_handler: {e}")
-
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        query = update.callback_query
-        try:
-            await query.answer()
-        except Exception:
-            pass
-        
-        chat_id = query.message.chat_id
-        if query.data in ["btn_schedina_100", "btn_schedina_70", "btn_schedina_50", "btn_schedina_bomba"]:
-            tipo_map = {"btn_schedina_100": "100", "btn_schedina_70": "70", "btn_schedina_50": "50", "btn_schedina_bomba": "bomba"}
-            text = await genera_schedina_singola(tipo_map[query.data], chat_id)
-            try:
-                await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
-            except Exception:
-                await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
-        elif query.data == "btn_partite_oggi":
-            text = await genera_testo_partite_oggi()
-            try:
-                await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
-            except Exception:
-                await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
-        elif query.data == "btn_live_radar":
-            text = await genera_testo_live()
-            try:
-                await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
-            except Exception:
-                await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]))
-        elif query.data == "btn_fonti_analisi":
-            text = await genera_testo_fonti()
-            try:
-                await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]), disable_web_page_preview=True)
-            except Exception:
-                await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Menu", callback_data="btn_menu")]]), disable_web_page_preview=True)
-        elif query.data == "btn_bankroll":
-            await mostra_bankroll_menu(update, context)
-        elif query.data == "btn_vip":
-            await mostra_info_vip(update, context)
-        elif query.data == "btn_get_link":
-            await get_invite_link_handler(update, context)
-        elif query.data == "btn_menu":
-            await start(update, context)
-    except Exception as e:
-        logging.error(f"Errore gestione bottoni: {e}")
-
-def main():
-    try:
-        # Avvio server web in background per Render (Keep-Alive)
-        server_thread = threading.Thread(target=run_web_server, daemon=True)
-        server_thread.start()
-
-        application = ApplicationBuilder().token(TOKEN).build()
-        
-        # Avvio thread in background per le notifiche live automatiche
-        notif_thread = threading.Thread(target=background_live_notifier, args=(application,), daemon=True)
-        notif_thread.start()
-
-        application.add_handler(CommandHandler("start", start))
-        application.add_handler(CommandHandler("admin", admin_panel_command))
-        application.add_handler(CommandHandler("setbankroll", set_bankroll_command))
-        application.add_handler(CommandHandler("setvip", setvip_command))
-        application.add_handler(CommandHandler("givevip", givevip_command))
-        application.add_handler(CommandHandler("broadcast", broadcast_command))
-        application.add_handler(CommandHandler("termini", termini_command))
-        application.add_handler(CallbackQueryHandler(button_handler))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat_assistant_handler))
-
-        logging.info("Bot King Pronostici Pro avviato con successo al 100%!")
-        application.run_polling(drop_pending_updates=True)
-    except Exception as e:
-        logging.critical(fuz:=f"Errore critico nel main: {e}")
-        traceback.print_exc()
-        sys.exit(1)
-
-if __name__ == '__main__':
-    main()
