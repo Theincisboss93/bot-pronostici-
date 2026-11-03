@@ -256,4 +256,248 @@ async def genera_testo_partite_oggi():
     try:
         data = fetch_from_football_api(url)
         if data and "matches" in data:
-            for match in data.
+            for match in data.get("matches", [])[:10]:
+                home = match.get('homeTeam', {}).get('name', 'Casa')
+                away = match.get('awayTeam', {}).get('name', 'Ospiti')
+                comp = match.get('competition', {}).get('name', 'Campionato')
+                status = match.get('status', 'SCHEDULED')
+                
+                score = match.get('score', {}).get('fullTime', {})
+                hg = score.get('home', 0) if score.get('home') is not None else 0
+                ag = score.get('away', 0) if score.get('away') is not None else 0
+                
+                if status == 'FINISHED':
+                    stato_str = f"🏁 Terminata ({hg} - {ag})"
+                elif status in ['IN_PLAY', 'PAUSED']:
+                    stato_str = f"🔴 LIVE ({hg} - {ag})"
+                else:
+                    stato_str = "⏳ Programmata"
+                    
+                partite_list.append(f"🏆 {comp}\n⚽ {home} vs {away}\n📌 Stato: {stato_str}\n-----------------------------------")
+    except Exception as e:
+        logging.error(f"Errore recupero partite: {e}")
+
+    testo = f"📅 PARTITE DEL GIORNO ({oggi_ita})\n\n"
+    if partite_list:
+        testo += "\n".join(partite_list)
+    else:
+        testo += "Nessuna partita disponibile per la data odierna."
+    
+    return testo
+
+# --- MONITORAGGIO LIVE ---
+async def genera_testo_live():
+    oggi = datetime.now().strftime('%Y-%m-%d')
+    oggi_ita = datetime.now().strftime('%d/%m/%Y')
+    url = f"https://api.football-data.org/v4/matches?date={oggi}"
+    
+    segnali_live = []
+    try:
+        data = fetch_from_football_api(url)
+        if data and "matches" in data:
+            for match in data.get("matches", []):
+                if match.get('status') in ['IN_PLAY', 'PAUSED']:
+                    home = match.get('homeTeam', {}).get('name', 'Casa')
+                    away = match.get('awayTeam', {}).get('name', 'Ospiti')
+                    comp = match.get('competition', {}).get('name', 'Campionato')
+                    score = match.get('score', {}).get('fullTime', {})
+                    hg = score.get('home', 0)
+                    ag = score.get('away', 0)
+                    
+                    segnali_live.append(
+                        f"🔴 LIVE ({comp})\n"
+                        f"⚽ {home} {hg} - {ag} {away}\n"
+                        f"-----------------------------------\n"
+                    )
+    except Exception as e:
+        logging.error(f"Errore Live: {e}")
+
+    if not segnali_live:
+        segnali_live.append("Nessuna partita in corso in questo momento.")
+
+    return f"🚨 MONITORAGGIO MATCH LIVE ({oggi_ita}) 🚨\n\n" + "\n".join(segnali_live)
+
+# --- FONTI DI ANALISI ---
+async def genera_testo_fonti():
+    return (
+        "🔍 **SITI E FONTI DI ANALISI PROFESSIONALE** 📊\n\n"
+        "1. **FBref** (Statistiche avanzate e xG): https://fbref.com/\n"
+        "2. **Understat** (Expected Goals): https://understat.com/\n"
+        "3. **WhoScored**: https://it.whoscored.com/\n"
+        "4. **Transfermarkt**: https://www.transfermarkt.it/\n"
+        "5. **Sofascore**: https://www.sofascore.com/it/"
+    )
+
+# --- BANKROLL ---
+async def mostra_bankroll_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        query = update.callback_query
+        try:
+            await query.answer()
+        except Exception:
+            pass
+        
+        chat_id = query.message.chat_id
+        u_data = get_user_data(chat_id)
+        bank = u_data["bankroll"]
+        
+        stake_1 = round(bank * 0.02, 2)
+        stake_2 = round(bank * 0.05, 2)
+        
+        testo = (
+            f"📊 **GESTIONE DEL BANKROLL**\n\n"
+            f"💰 Budget attuale: **{bank}€**\n"
+            f"• Puntata Prudente (2%): **{stake_1}€**\n"
+            f"• Puntata Standard (5%): **{stake_2}€**\n\n"
+            "Usa /setbankroll <valore> per aggiornare il budget."
+        )
+        keyboard = [[InlineKeyboardButton("Torna al Menu Principale", callback_data="btn_menu")]]
+        
+        try:
+            await query.message.edit_text(testo, reply_markup=InlineKeyboardMarkup(keyboard))
+        except Exception:
+            await query.message.reply_text(testo, reply_markup=InlineKeyboardMarkup(keyboard))
+    except Exception as e:
+        logging.error(f"Errore bankroll menu: {e}")
+
+async def set_bankroll_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        chat_id = update.effective_chat.id
+        if context.args:
+            valore = float(context.args[0])
+            update_user_bankroll(chat_id, valore)
+            await update.message.reply_text(f"✅ Bankroll aggiornato a {valore}€!")
+        else:
+            await update.message.reply_text("⚠️ Specifica il valore. Esempio: /setbankroll 150")
+    except ValueError:
+        await update.message.reply_text("❌ Valore non valido. Usa es: /setbankroll 150")
+
+# --- AREA VIP & PAGAMENTO MANUALE ---
+async def mostra_info_vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        query = update.callback_query
+        try:
+            await query.answer()
+        except Exception:
+            pass
+        
+        testo = (
+            "💎 **AREA ABBONAMENTO VIP / SERVIZIO**\n\n"
+            "• Abbonamento Mensile: 19.99€\n"
+            "• Abbonamento Annuale: 99.00€\n\n"
+            "🔄 **Come pagare:**\n"
+            "1. Contatta direttamente l'amministratore per concordare il pagamento.\n"
+            "2. Invia la ricevuta in chat: verrai abilitato immediatamente e riceverai il link d'invito al canale VIP!"
+        )
+        keyboard = [
+            [InlineKeyboardButton("✉️ Contatta Admin per Pagare", url=f"https://t.me/{ADMIN_USERNAME}")],
+            [InlineKeyboardButton("Torna al Menu Principale", callback_data="btn_menu")]
+        ]
+        try:
+            await query.message.edit_text(testo, reply_markup=InlineKeyboardMarkup(keyboard))
+        except Exception:
+            await query.message.reply_text(testo, reply_markup=InlineKeyboardMarkup(keyboard))
+    except Exception as e:
+        logging.error(f"Errore info vip: {e}")
+
+# --- COMANDI ADMIN ---
+async def setvip_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_chat.id != ADMIN_CHAT_ID:
+        await update.message.reply_text("❌ Non autorizzato.")
+        return
+
+    if len(context.args) >= 2:
+        try:
+            target_id = int(context.args[0])
+            giorni = int(context.args[1])
+            expiry_dt = datetime.now() + timedelta(days=giorni)
+            set_user_vip_db(target_id, 1, expiry_dt)
+            await update.message.reply_text(f"✅ Utente {target_id} impostato VIP per {giorni} giorni!")
+            try:
+                await context.bot.send_message(chat_id=target_id, text="🎉 Abbonamento VIP attivato! Usa /start per avere il link d'invito.")
+            except Exception:
+                pass
+        except ValueError:
+            await update.message.reply_text("❌ Usa: /setvip <chat_id> <giorni>")
+    else:
+        await update.message.reply_text("⚠️ Usa: /setvip <chat_id> <giorni>")
+
+async def givevip_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_chat.id != ADMIN_CHAT_ID:
+        await update.message.reply_text("❌ Non autorizzato.")
+        return
+
+    if len(context.args) >= 1:
+        try:
+            target_id = int(context.args[0])
+            set_user_vip_db(target_id, 1, None)
+            await update.message.reply_text(f"✅ Accesso VIP gratuito illimitato concesso all'utente {target_id}!")
+            try:
+                await context.bot.send_message(chat_id=target_id, text="🎉 Ti è stato concesso l'accesso VIP gratuito illimitato! Usa /start per ottenere il link d'invito.")
+            except Exception:
+                pass
+        except ValueError:
+            await update.message.reply_text("❌ ID non valido. Usa: /givevip <chat_id>")
+    else:
+        await update.message.reply_text("⚠️ Specifica l'ID. Esempio: /givevip 123456789")
+
+async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_chat.id != ADMIN_CHAT_ID:
+        await update.message.reply_text("❌ Non autorizzato.")
+        return
+
+    msg = " ".join(context.args)
+    if not msg:
+        await update.message.reply_text("⚠️ Usa: /broadcast <messaggio>")
+        return
+
+    utenti = get_all_users()
+    inviati = 0
+    for uid in utenti:
+        try:
+            await context.bot.send_message(chat_id=uid, text=f"📢 {msg}")
+            inviati += 1
+        except Exception:
+            pass
+    await update.message.reply_text(f"✅ Broadcast inviato a {inviati} utenti.")
+
+async def termini_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message:
+        await update.message.reply_text("📜 Servizio puramente statistico e di intrattenimento. Gioco vietato ai minori.")
+
+async def get_invite_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        query = update.callback_query
+        try:
+            await query.answer()
+        except Exception:
+            pass
+        
+        chat_id = query.message.chat_id
+        user_info = get_user_data(chat_id)
+        
+        if user_info["is_vip"] == 1:
+            try:
+                link = await context.bot.create_chat_invite_link(
+                    chat_id=CHANNEL_PRIVATO, 
+                    member_limit=1, 
+                    expire_date=datetime.now() + timedelta(hours=24)
+                )
+                testo = f"🎉 Ecco il tuo link d'invito monouso:\n\n{link.invite_link}\n\n⚠️ Il link scade in 24 ore ed è utilizzabile una sola volta."
+            except Exception as e:
+                logging.error(f"Errore creazione link canale: {e}")
+                testo = "⚠️ Errore generazione link. Verifica che il bot sia amministratore del canale privato."
+        else:
+            testo = "🔒 Non sei un utente VIP."
+
+        keyboard = [[InlineKeyboardButton("Torna al Menu Principale", callback_data="btn_menu")]]
+        try:
+            await query.message.edit_text(text=testo, reply_markup=InlineKeyboardMarkup(keyboard), disable_web_page_preview=True)
+        except Exception:
+            await query.message.reply_text(text=testo, reply_markup=InlineKeyboardMarkup(keyboard))
+    except Exception as e:
+        logging.error(f"Errore get invite link: {e}")
+
+# --- HANDLER MESSAGGI ---
+async def chat_assistant_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or
