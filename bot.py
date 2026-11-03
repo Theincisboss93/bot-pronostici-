@@ -4,6 +4,7 @@ import sys
 import traceback
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 import sqlite3
@@ -142,6 +143,7 @@ def fetch_from_football_api(endpoint_url):
                 return res
     return None
 
+# --- WEB SERVER PER RENDER (KEEP-ALIVE) ---
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -354,36 +356,43 @@ async def genera_testo_live():
 
     return f"🚨 MONITORAGGIO MATCH LIVE ({oggi_ita}) 🚨\n\n" + "\n".join(segnali_live)
 
-async def job_notifiche_live(context: ContextTypes.DEFAULT_TYPE):
-    oggi = datetime.now().strftime('%Y-%m-%d')
-    url = f"https://api.football-data.org/v4/matches?date={oggi}"
-    try:
-        data = fetch_from_football_api(url)
-        if data and "matches" in data:
-            for match in data.get("matches", []):
-                if match.get('status') in ['IN_PLAY', 'PAUSED']:
-                    home = match.get('homeTeam', {}).get('name', 'Casa')
-                    away = match.get('awayTeam', {}).get('name', 'Ospiti')
-                    score = match.get('score', {}).get('fullTime', {})
-                    hg = score.get('home', 0)
-                    ag = score.get('away', 0)
-                    
-                    notif_text = (
-                        f"🚨 **NOTIFICA LIVE: COSA SCOMMETTERE ORA!** 🚨\n\n"
-                        f"⚽ **{home} {hg} - {ag} {away}**\n"
-                        f"🔥 Match caldo in corso! Ottima occasione per puntare in live.\n"
-                        f"Controlla le quote sul tuo bookmaker!"
-                    )
-                    
-                    utenti = get_all_users()
-                    for uid in utenti:
-                        try:
-                            await context.bot.send_message(chat_id=uid, text=notif_text)
-                        except Exception:
-                            pass
-                    break
-    except Exception as e:
-        logging.error(f"Errore job notifiche live: {e}")
+# --- NOTIFICHE LIVE AUTOMATICHE IN THREAD SEPARATO ---
+def background_live_notifier(bot_app):
+    import asyncio
+    while True:
+        try:
+            time.sleep(900) # Controlla ogni 15 minuti
+            oggi = datetime.now().strftime('%Y-%m-%d')
+            url = f"https://api.football-data.org/v4/matches?date={oggi}"
+            data = fetch_from_football_api(url)
+            if data and "matches" in data:
+                for match in data.get("matches", []):
+                    if match.get('status') in ['IN_PLAY', 'PAUSED']:
+                        home = match.get('homeTeam', {}).get('name', 'Casa')
+                        away = match.get('awayTeam', {}).get('name', 'Ospiti')
+                        score = match.get('score', {}).get('fullTime', {})
+                        hg = score.get('home', 0)
+                        ag = score.get('away', 0)
+                        
+                        notif_text = (
+                            f"🚨 **NOTIFICA LIVE: COSA SCOMMETTERE ORA!** 🚨\n\n"
+                            f"⚽ **{home} {hg} - {ag} {away}**\n"
+                            f"🔥 Match caldo in corso! Ottima occasione per puntare in live.\n"
+                            f"Controlla le quote sul tuo bookmaker!"
+                        )
+                        
+                        utenti = get_all_users()
+                        for uid in utenti:
+                            try:
+                                asyncio.run_coroutine_threadsafe(
+                                    bot_app.bot.send_message(chat_id=uid, text=notif_text),
+                                    bot_app.loop
+                                )
+                            except Exception:
+                                pass
+                        break
+        except Exception as e:
+            logging.error(f"Errore nel thread notifiche live: {e}")
 
 async def genera_testo_fonti():
     return (
@@ -651,13 +660,15 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     try:
+        # Avvio server web in background per Render (Keep-Alive)
         server_thread = threading.Thread(target=run_web_server, daemon=True)
         server_thread.start()
 
         application = ApplicationBuilder().token(TOKEN).build()
         
-        job_queue = application.job_queue
-        job_queue.run_repeating(job_notifiche_live, interval=900, first=10)
+        # Avvio thread in background per le notifiche live automatiche
+        notif_thread = threading.Thread(target=background_live_notifier, args=(application,), daemon=True)
+        notif_thread.start()
 
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("admin", admin_panel_command))
@@ -672,7 +683,7 @@ def main():
         logging.info("Bot King Pronostici Pro avviato con successo al 100%!")
         application.run_polling(drop_pending_updates=True)
     except Exception as e:
-        logging.critical(f"Errore critico nel main: {e}")
+        logging.critical(fuz:=f"Errore critico nel main: {e}")
         traceback.print_exc()
         sys.exit(1)
 
