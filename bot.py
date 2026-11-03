@@ -183,7 +183,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             [InlineKeyboardButton("🎯 Schedina 100% (Multipla)", callback_data="btn_schedina_100"), InlineKeyboardButton("📊 Schedina 70% (Multipla)", callback_data="btn_schedina_70")],
             [InlineKeyboardButton("📈 Schedina 50% (Multipla)", callback_data="btn_schedina_50"), InlineKeyboardButton("💣 Bomba Schedina (Multipla)", callback_data="btn_schedina_bomba")],
-            [InlineKeyboardButton("📅 Partite e Risultati Oggi", callback_data="btn_partite_oggi")],
+            [InlineKeyboardButton("📅 Tutte le Partite di Oggi", callback_data="btn_partite_oggi")],
             [InlineKeyboardButton("🔴 Monitoraggio LIVE", callback_data="btn_live_radar")],
             [InlineKeyboardButton("📊 Gestione Bankroll & Stake", callback_data="btn_bankroll")],
             [InlineKeyboardButton("🔍 Fonti e Siti di Analisi (xG)", callback_data="btn_fonti_analisi")],
@@ -209,89 +209,137 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logging.error(f"Errore in start: {e}")
 
+def valuta_esito_partita(match_obj, tipo_giocata):
+    status = match_obj.get('status', 'SCHEDULED')
+    score = match_obj.get('score', {}).get('fullTime', {})
+    hg = score.get('home', 0) if score.get('home') is not None else 0
+    ag = score.get('away', 0) if score.get('away') is not None else 0
+    
+    if status not in ['FINISHED', 'IN_PLAY', 'PAUSED']:
+        return f"⏳ In Programma ({hg}-{ag})"
+
+    total_goals = hg + ag
+    if status == 'FINISHED':
+        if "Over" in tipo_giocata:
+            try:
+                 soglia = float(tipo_giocata.split("Over")[1].split()[0])
+                 if total_goals > soglia:
+                     return f"✅ VINTA ({hg}-{ag} FINALE)"
+                 else:
+                     return f"❌ PERSA ({hg}-{ag} FINALE)"
+            except Exception:
+                pass
+        if "Gol" in tipo_giocata or "Goal" in tipo_giocata:
+            if hg > 0 and ag > 0:
+                return f"✅ VINTA ({hg}-{ag} FINALE)"
+            else:
+                return f"❌ PERSA ({hg}-{ag} FINALE)"
+        return f"🏁 Terminata ({hg}-{ag})"
+    else:
+        return f"🔴 LIVE ({hg}-{ag} in corso)"
+
 async def genera_schedina_singola(tipo, chat_id=1220916735):
     oggi_ita = datetime.now().strftime('%d/%m/%Y')
     url = f"https://api.football-data.org/v4/matches?date={datetime.now().strftime('%Y-%m-%d')}"
     
-    match_trovati = []
+    matches_api = []
     try:
         data = fetch_from_football_api(url)
         if data and "matches" in data:
-            for match in data.get("matches", []):
-                home = match.get('homeTeam', {}).get('name', 'Casa')
-                away = match.get('awayTeam', {}).get('name', 'Ospiti')
-                match_trovati.append(f"{home} vs {away}")
+            matches_api = data.get("matches", [])
     except Exception:
         pass
-
-    while len(match_trovati) < 15:
-        match_trovati.append(f"Top Match #{len(match_trovati)+1}")
 
     u_data = get_user_data(chat_id)
     bankroll = u_data["bankroll"]
 
+    def get_match_info(index, fallback_home, fallback_away, tipologia):
+        if index < len(matches_api):
+            m = matches_api[index]
+            h = m.get('homeTeam', {}).get('name', 'Casa')
+            a = m.get('awayTeam', {}).get('name', 'Ospiti')
+            stato = valuta_esito_partita(m, tipologia)
+            return f"{h} vs {a} -> **{tipologia}** [{stato}]"
+        else:
+            return f"{fallback_home} vs {fallback_away} -> **{tipologia}** [⏳ In Programma]"
+
     if tipo == "100":
-        p1, p2, p3, p4 = match_trovati[0], match_trovati[1], match_trovati[2], match_trovati[3]
+        m1 = get_match_info(0, "Real Madrid", "Barcellona", "Over 1.5")
+        m2 = get_match_info(1, "Inter", "Milan", "Segna Goal")
+        m3 = get_match_info(2, "Manchester City", "Arsenal", "1X")
+        p4 = get_match_info(3, "Bayern Monaco", "Dortmund", "Multigol 1-4")
         quota_totale = 3.85
         stake = round(bankroll * 0.05, 2)
         vincita = round(stake * quota_totale, 2)
         return (
             f"🎯 **SCHEDINA MULTIPLA 100% (Alta Affidabilità) - {oggi_ita}**\n\n"
-            f"1️⃣ ⚽ {p1} -> **1X + Over 1.5**\n"
-            f"2️⃣ ⚽ {p2} -> **Multigol 1-4**\n"
-            f"3️⃣ ⚽ {p3} -> **Over 1.5 Casa**\n"
-            f"4️⃣ ⚽ {p4} -> **Gol OSPITI (Segna)**\n\n"
+            f"1️⃣ ⚽ {m1}\n"
+            f"2️⃣ ⚽ {m2}\n"
+            f"3️⃣ ⚽ {m3}\n"
+            f"4️⃣ ⚽ {p4}\n\n"
             f"📊 Quota Totale Multipla: **{quota_totale}**\n"
             f"💰 Puntata Consigliata (5%): **{stake}€**\n"
             f"🏆 **VINCITA POTENZIALE: {vincita}€**\n\n"
             "⚠️ _Gioca responsabilmente._"
         )
     elif tipo == "70":
-        p1, p2, p3, p4, p5 = match_trovati[4], match_trovati[5], match_trovati[6], match_trovati[7], match_trovati[8]
+        m1 = get_match_info(4, "Napoli", "Juventus", "Gol / Over 2.5")
+        m2 = get_match_info(5, "Roma", "Lazio", "1X + Over 1.5")
+        m3 = get_match_info(6, "PSG", "Marsiglia", "Over 1.5")
+        m4 = get_match_info(7, "Liverpool", "Chelsea", "Gol")
+        m5 = get_match_info(8, "Bayer Leverkusen", "Lipsia", "Over 0.5 1° Tempo")
         quota_totale = 7.90
         stake = round(bankroll * 0.04, 2)
         vincita = round(stake * quota_totale, 2)
         return (
             f"📊 **SCHEDINA MULTIPLA 70% (Alta Probabilità) - {oggi_ita}**\n\n"
-            f"1️⃣ ⚽ {p1} -> **Gol (Goal/Goal)**\n"
-            f"2️⃣ ⚽ {p2} -> **Over 2.5**\n"
-            f"3️⃣ ⚽ {p3} -> **12 + Over 1.5**\n"
-            f"4️⃣ ⚽ {p4} -> **X2 + Multigol 1-3**\n"
-            f"5️⃣ ⚽ {p5} -> **Over 0.5 1° Tempo**\n\n"
+            f"1️⃣ ⚽ {m1}\n"
+            f"2️⃣ ⚽ {m2}\n"
+            f"3️⃣ ⚽ {m3}\n"
+            f"4️⃣ ⚽ {m4}\n"
+            f"5️⃣ ⚽ {m5}\n\n"
             f"📊 Quota Totale Multipla: **{quota_totale}**\n"
             f"💰 Puntata Consigliata (4%): **{stake}€**\n"
             f"🏆 **VINCITA POTENZIALE: {vincita}€**\n\n"
             "⚠️ _Gioca responsabilmente._"
         )
     elif tipo == "50":
-        p1, p2, p3, p4, p5 = match_trovati[9], match_trovati[10], match_trovati[11], match_trovati[12], match_trovati[13]
+        m1 = get_match_info(9, "Porto", "Benfica", "Combo 1X + Goal")
+        m2 = get_match_info(10, "Ajax", "Feyenoord", "Over 3.5")
+        m3 = get_match_info(11, "Galatasaray", "Fenerbahce", "Parziale/Finale 1/1")
+        m4 = get_match_info(0, "Atletico Madrid", "Valencia", "Multigol 2-4")
+        m5 = get_match_info(1, "Villarreal", "Real Sociedad", "Rigore Si")
         quota_totale = 18.50
         stake = round(bankroll * 0.03, 2)
         vincita = round(stake * quota_totale, 2)
         return (
             f"📈 **SCHEDINA MULTIPLA 50% (Rischio Calcolato) - {oggi_ita}**\n\n"
-            f"1️⃣ ⚽ {p1} -> **Combo 1X + Goal**\n"
-            f"2️⃣ ⚽ {p2} -> **Over 3.5**\n"
-            f"3️⃣ ⚽ {p3} -> **Parziale/Finale 1/1**\n"
-            f"4️⃣ ⚽ {p4} -> **Multigol 2-4**\n"
-            f"5️⃣ ⚽ {p5} -> **Rigore Si / No (Si)**\n\n"
+            f"1️⃣ ⚽ {m1}\n"
+            f"2️⃣ ⚽ {m2}\n"
+            f"3️⃣ ⚽ {m3}\n"
+            f"4️⃣ ⚽ {m4}\n"
+            f"5️⃣ ⚽ {m5}\n\n"
             f"📊 Quota Totale Multipla: **{quota_totale}**\n"
             f"💰 Puntata Consigliata (3%): **{stake}€**\n"
             f"🏆 **VINCITA POTENZIALE: {vincita}€**\n\n"
             "⚠️ _Gioca responsabilmente._"
         )
     elif tipo == "bomba":
-        p1, p2, p3, p4, p5 = match_trovati[14], match_trovati[2], match_trovati[5], match_trovati[8], match_trovati[11]
+        m1 = get_match_info(2, "Tottenham", "Aston Villa", "Risultato Esatto")
+        m2 = get_match_info(3, "Atalanta", "Fiorentina", "X Parziale / 1 Finale")
+        m3 = get_match_info(4, "Monaco", "Lione", "Gol + Over 3.5")
+        m4 = get_match_info(5, "Stoccarda", "Wolfsburg", "Combo 2 + Over 1.5")
+        m5 = get_match_info(6, "Betis", "Sevilla", "Espulsione Si")
         quota_totale = 55.00
         stake = round(bankroll * 0.02, 2)
         vincita = round(stake * quota_totale, 2)
         return (
             f"💣 **BOMBA SCHEDINA MULTIPLA (Quota Pazzesca) - {oggi_ita}**\n\n"
-            f"1️⃣ ⚽ {p1} -> **Risultato Esatto (Multiplo)**\n"
-            f"2️⃣ ⚽ {p2} -> **X Parziale / 1 Finale**\n"
-            f"3️⃣ ⚽ {p3} -> **Gol + Over 3.5**\n"
-            f"4️⃣ ⚽ {p4} -> **Combo 2 + Over 1.5**\n"
-            f"5️⃣ ⚽ {p5} -> **Espulsione Si / No (Si)**\n\n"
+            f"1️⃣ ⚽ {m1}\n"
+            f"2️⃣ ⚽ {m2}\n"
+            f"3️⃣ ⚽ {m3}\n"
+            f"4️⃣ ⚽ {m4}\n"
+            f"5️⃣ ⚽ {m5}\n\n"
             f"📊 Quota Totale Multipla: **{quota_totale}**\n"
             f"💰 Puntata Consigliata (2% - Prudente): **{stake}€**\n"
             f"🏆 **VINCITA POTENZIALE CONSISTENTE: {vincita}€**\n\n"
@@ -308,7 +356,7 @@ async def genera_testo_partite_oggi():
     try:
         data = fetch_from_football_api(url)
         if data and "matches" in data:
-            for match in data.get("matches", [])[:10]:
+            for match in data.get("matches", []):
                 home = match.get('homeTeam', {}).get('name', 'Casa')
                 away = match.get('awayTeam', {}).get('name', 'Ospiti')
                 comp = match.get('competition', {}).get('name', 'Campionato')
@@ -321,15 +369,15 @@ async def genera_testo_partite_oggi():
                 if status == 'FINISHED':
                     stato_str = f"🏁 Terminata ({hg} - {ag})"
                 elif status in ['IN_PLAY', 'PAUSED']:
-                    stato_str = f"🔴 LIVE ({hg} - {ag})"
+                    stato_str = f"🔴 LIVE in corso ({hg} - {ag})"
                 else:
                     stato_str = "⏳ Programmata"
                     
                 partite_list.append(f"🏆 {comp}\n⚽ {home} vs {away}\n📌 Stato: {stato_str}\n-----------------------------------")
     except Exception as e:
-        logging.error(f"Errore recupero partite: {e}")
+        logging.error(f"Errore recupero tutte le partite: {e}")
 
-    testo = f"📅 PARTITE DEL GIORNO ({oggi_ita})\n\n"
+    testo = f"📅 TUTTE LE PARTITE DEL GIORNO ({oggi_ita})\n\n"
     if partite_list:
         testo += "\n".join(partite_list)
     else:
@@ -358,7 +406,7 @@ async def genera_testo_live():
                     segnali_live.append(
                         f"🔴 **SEGNALE LIVE DA GIOCARE!** ({comp})\n"
                         f"⚽ {home} {hg} - {ag} {away}\n"
-                        f"💡 **Cosa scommettere in live:** Valutare Over 0.5 / 1.5 o Gol in base all'andamento in campo.\n"
+                        f"💡 **Consiglio Live:** Valutare Over 0.5 / 1.5 o Gol in base all'andamento in campo.\n"
                         f"-----------------------------------\n"
                     )
     except Exception as e:
