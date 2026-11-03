@@ -224,70 +224,74 @@ async def genera_schedina_singola(tipo, chat_id=1220916735):
     except Exception:
         pass
 
-    while len(match_trovati) < 12:
-        match_trovati.append(f"Match di cartello #{len(match_trovati)+1}")
+    while len(match_trovati) < 15:
+        match_trovati.append(f"Top Match #{len(match_trovati)+1}")
 
     u_data = get_user_data(chat_id)
     bankroll = u_data["bankroll"]
 
     if tipo == "100":
-        p1, p2, p3 = match_trovati[0], match_trovati[1], match_trovati[2]
-        quota_totale = 2.55
+        p1, p2, p3, p4 = match_trovati[0], match_trovati[1], match_trovati[2], match_trovati[3]
+        quota_totale = 3.85
         stake = round(bankroll * 0.05, 2)
         vincita = round(stake * quota_totale, 2)
         return (
             f"🎯 **SCHEDINA MULTIPLA 100% (Alta Affidabilità) - {oggi_ita}**\n\n"
-            f"1️⃣ ⚽ {p1} -> **Over 1.5**\n"
-            f"2️⃣ ⚽ {p2} -> **Segna Goal**\n"
-            f"3️⃣ ⚽ {p3} -> **1X**\n\n"
+            f"1️⃣ ⚽ {p1} -> **1X + Over 1.5**\n"
+            f"2️⃣ ⚽ {p2} -> **Multigol 1-4**\n"
+            f"3️⃣ ⚽ {p3} -> **Over 1.5 Casa**\n"
+            f"4️⃣ ⚽ {p4} -> **Gol OSPITI (Segna)**\n\n"
             f"📊 Quota Totale Multipla: **{quota_totale}**\n"
             f"💰 Puntata Consigliata (5%): **{stake}€**\n"
             f"🏆 **VINCITA POTENZIALE: {vincita}€**\n\n"
             "⚠️ _Gioca responsabilmente._"
         )
     elif tipo == "70":
-        p1, p2, p3, p4 = match_trovati[3], match_trovati[4], match_trovati[5], match_trovati[6]
-        quota_totale = 5.20
+        p1, p2, p3, p4, p5 = match_trovati[4], match_trovati[5], match_trovati[6], match_trovati[7], match_trovati[8]
+        quota_totale = 7.90
         stake = round(bankroll * 0.04, 2)
         vincita = round(stake * quota_totale, 2)
         return (
             f"📊 **SCHEDINA MULTIPLA 70% (Alta Probabilità) - {oggi_ita}**\n\n"
-            f"1️⃣ ⚽ {p1} -> **Gol / Over 2.5**\n"
-            f"2️⃣ ⚽ {p2} -> **1X + Over 1.5**\n"
-            f"3️⃣ ⚽ {p3} -> **Over 1.5**\n"
-            f"4️⃣ ⚽ {p4} -> **Gol**\n\n"
+            f"1️⃣ ⚽ {p1} -> **Gol (Goal/Goal)**\n"
+            f"2️⃣ ⚽ {p2} -> **Over 2.5**\n"
+            f"3️⃣ ⚽ {p3} -> **12 + Over 1.5**\n"
+            f"4️⃣ ⚽ {p4} -> **X2 + Multigol 1-3**\n"
+            f"5️⃣ ⚽ {p5} -> **Over 0.5 1° Tempo**\n\n"
             f"📊 Quota Totale Multipla: **{quota_totale}**\n"
             f"💰 Puntata Consigliata (4%): **{stake}€**\n"
             f"🏆 **VINCITA POTENZIALE: {vincita}€**\n\n"
             "⚠️ _Gioca responsabilmente._"
         )
     elif tipo == "50":
-        p1, p2, p3, p4 = match_trovati[7], match_trovati[8], match_trovati[9], match_trovati[10]
-        quota_totale = 12.50
+        p1, p2, p3, p4, p5 = match_trovati[9], match_trovati[10], match_trovati[11], match_trovati[12], match_trovati[13]
+        quota_totale = 18.50
         stake = round(bankroll * 0.03, 2)
         vincita = round(stake * quota_totale, 2)
         return (
             f"📈 **SCHEDINA MULTIPLA 50% (Rischio Calcolato) - {oggi_ita}**\n\n"
-            f"1️⃣ ⚽ {p1} -> **1 2T / Combo**\n"
-            f"2️⃣ ⚽ {p2} -> **Over 2.5**\n"
-            f"3️⃣ ⚽ {p3} -> **Gol + Over 1.5**\n"
-            f"4️⃣ ⚽ {p4} -> **X2 + Over 1.5**\n\n"
+            f"1️⃣ ⚽ {p1} -> **Combo 1X + Goal**\n"
+            f"2️⃣ ⚽ {p2} -> **Over 3.5**\n"
+            f"3️⃣ ⚽ {p3} -> **Parziale/Finale 1/1**\n"
+            f"4️⃣ ⚽ {p4} -> **Multigol 2-4**\n"
+            f"5️⃣ ⚽ {p5} -> **Rigore Si / No (Si)**\n\n"
             f"📊 Quota Totale Multipla: **{quota_totale}**\n"
             f"💰 Puntata Consigliata (3%): **{stake}€**\n"
             f"🏆 **VINCITA POTENZIALE: {vincita}€**\n\n"
             "⚠️ _Gioca responsabilmente._"
         )
     elif tipo == "bomba":
-        p1, p2, p3, p4 = match_trovati[11], match_trovati[0], match_trovati[3], match_trovati[5]
-        quota_totale = 35.00
+        p1, p2, p3, p4, p5 = match_trovati[14], match_trovati[2], match_trovati[5], match_trovati[8], match_trovati[11]
+        quota_totale = 55.00
         stake = round(bankroll * 0.02, 2)
         vincita = round(stake * quota_totale, 2)
         return (
             f"💣 **BOMBA SCHEDINA MULTIPLA (Quota Pazzesca) - {oggi_ita}**\n\n"
-            f"1️⃣ ⚽ {p1} -> **Risultato Esatto / Combo**\n"
-            f"2️⃣ ⚽ {p2} -> **X Primo Tempo**\n"
-            f"3️⃣ ⚽ {p3} -> **Multigol 2-3**\n"
-            f"4️⃣ ⚽ {p4} -> **Ribaltone / Gol Gol**\n\n"
+            f"1️⃣ ⚽ {p1} -> **Risultato Esatto (Multiplo)**\n"
+            f"2️⃣ ⚽ {p2} -> **X Parziale / 1 Finale**\n"
+            f"3️⃣ ⚽ {p3} -> **Gol + Over 3.5**\n"
+            f"4️⃣ ⚽ {p4} -> **Combo 2 + Over 1.5**\n"
+            f"5️⃣ ⚽ {p5} -> **Espulsione Si / No (Si)**\n\n"
             f"📊 Quota Totale Multipla: **{quota_totale}**\n"
             f"💰 Puntata Consigliata (2% - Prudente): **{stake}€**\n"
             f"🏆 **VINCITA POTENZIALE CONSISTENTE: {vincita}€**\n\n"
